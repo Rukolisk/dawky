@@ -1,0 +1,19 @@
+# docker-compose.dev.yml — Développement local
+# Lancement : docker compose -f docker-compose.dev.yml up -d
+
+services:
+  app:
+    build: .
+    container_name: dawky-app-dev
+    restart: unless-stopped
+    env_file: .env
+    ports:
+      - "3000:3000"
+    volumes:
+      # Hot reload en dev
+      - .:/app
+      - /app/node_modules
+      - /app/.output
+    environment:
+      - NODE_ENV=development
+    command: npm run dev

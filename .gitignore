@@ -1,0 +1,23 @@
+# Dépendances
+node_modules/
+
+# Nuxt build
+.nuxt/
+.output/
+dist/
+
+# Environnement — NE JAMAIS committer !
+.env
+.env.local
+.env.production
+.env.*.local
+
+# OS
+.DS_Store
+*.log
+.idea/
+.vscode/
+
+# Docker volumes
+certbot-certs/
+certbot-www/

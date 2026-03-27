@@ -1,0 +1,305 @@
+// prisma/schema.prisma — Prisma 7
+
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["driverAdapters"]
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum TailleChien {
+  XS
+  S
+  M
+  L
+}
+
+enum TypeBox {
+  SURPRISE
+  CARTE
+}
+
+enum CategoriesProduit {
+  MASTICATION
+  NUTRITION
+  JOUET
+  SOIN
+  ACCESSOIRE
+}
+
+enum StatutCommande {
+  EN_ATTENTE
+  CONFIRMEE
+  PREPAREE
+  EXPEDIEE
+  LIVREE
+  ANNULEE
+}
+
+enum StatutAbonnement {
+  ACTIF
+  PAUSE
+  RESILIE
+}
+
+enum StatutBoxMensuelle {
+  BROUILLON     // Admin en cours de construction
+  VALIDEE       // Prête à être envoyée
+  EXPEDIEE      // Envoyée le 1er du mois
+  CLOTUREE      // Mois terminé — invendus traités
+}
+
+enum Role {
+  USER
+  ADMIN
+}
+
+// ─── Clients ─────────────────────────────
+
+model Client {
+  id          String   @id @default(cuid())
+  supabaseUid String?  @unique
+  email       String   @unique
+  prenom      String
+  nom         String
+  telephone   String?
+  adresse     String?
+  ville       String?
+  codePostal  String?
+  pays        String?  @default("France")
+  role        Role     @default(USER)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  abonnements Abonnement[]
+  commandes   Commande[]
+  contacts    Contact[]
+  quizResults QuizResult[]
+
+  @@map("clients")
+}
+
+// ─── Produits ────────────────────────────
+
+model Produit {
+  id          String            @id @default(cuid())
+  nom         String
+  description String
+  emoji       String            @default("📦")
+  categorie   CategoriesProduit
+  actif       Boolean           @default(true)
+  stock       Int               @default(0)
+  // true = produit invendu d'une ancienne box Surprise
+  // ces produits sont proposés en priorité dans la Box À la Carte
+  estInvendu  Boolean           @default(false)
+  // Mois d'origine de l'invendu (ex: "2025-01")
+  moisOrigine String?
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+
+  tailles             ProduitTaille[]
+  boxProduits         BoxProduit[]
+  selectionItems      SelectionItem[]
+  boxMensuelleItems   BoxMensuelleItem[]
+
+  @@map("produits")
+}
+
+model ProduitTaille {
+  id        String      @id @default(cuid())
+  produitId String
+  taille    TailleChien
+
+  produit Produit @relation(fields: [produitId], references: [id], onDelete: Cascade)
+
+  @@unique([produitId, taille])
+  @@map("produit_tailles")
+}
+
+// ─── Box Mensuelle ────────────────────────
+// Une BoxMensuelle = le contenu de la box Surprise pour UN mois donné
+// L'admin construit 3 BoxMensuelle par mois (une par taille S, M, L)
+// Elles sont toutes envoyées le 1er du mois à tous les abonnés
+
+model BoxMensuelle {
+  id          String             @id @default(cuid())
+  // Année-mois : "2025-03", "2025-04"…
+  mois        String
+  taille      TailleChien
+  theme       String?            // Thème du mois ex: "Printemps en forêt"
+  description String?
+  statut      StatutBoxMensuelle @default(BROUILLON)
+  // Date d'expédition prévue (automatiquement le 1er du mois)
+  dateExpedition DateTime?
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+
+  items    BoxMensuelleItem[]
+  commandes Commande[]
+
+  // Une seule box mensuelle par mois+taille
+  @@unique([mois, taille])
+  @@map("box_mensuelles")
+}
+
+// Produits inclus dans une BoxMensuelle
+model BoxMensuelleItem {
+  id             String  @id @default(cuid())
+  boxMensuelleId String
+  produitId      String
+  // Quantité prévue pour cette taille
+  quantite       Int     @default(1)
+  // Quantité réellement expédiée (rempli au moment de l'envoi)
+  quantiteEnvoyee Int?
+  // Si rempli après clôture : stock restant = invendu
+  stockRestant   Int?
+
+  boxMensuelle BoxMensuelle @relation(fields: [boxMensuelleId], references: [id], onDelete: Cascade)
+  produit      Produit      @relation(fields: [produitId], references: [id])
+
+  @@unique([boxMensuelleId, produitId])
+  @@map("box_mensuelle_items")
+}
+
+// ─── Formules d'abonnement ───────────────
+
+model FormulaBox {
+  id          String   @id @default(cuid())
+  nom         String
+  description String
+  type        TypeBox
+  prix        Float
+  slots       Int      @default(5)
+  actif       Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  abonnements Abonnement[]
+  commandes   Commande[]
+
+  @@map("formula_boxes")
+}
+
+model BoxProduit {
+  id        String  @id @default(cuid())
+  formulaId String?
+  produitId String
+  taille    TailleChien
+  quantite  Int     @default(1)
+
+  produit Produit @relation(fields: [produitId], references: [id], onDelete: Cascade)
+
+  @@map("box_produits")
+}
+
+// ─── Abonnements & Commandes ─────────────
+
+model Abonnement {
+  id               String           @id @default(cuid())
+  clientId         String
+  formulaId        String
+  taille           TailleChien
+  statut           StatutAbonnement @default(ACTIF)
+  engagement       Int              @default(12)
+  dateDebut        DateTime         @default(now())
+  dateFin          DateTime?
+  prochainePeriode DateTime?
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+
+  client    Client     @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  formula   FormulaBox @relation(fields: [formulaId], references: [id])
+  commandes Commande[]
+
+  @@map("abonnements")
+}
+
+model Commande {
+  id               String         @id @default(cuid())
+  clientId         String
+  formulaId        String
+  abonnementId     String?
+  // Si c'est une commande liée à une box mensuelle
+  boxMensuelleId   String?
+  taille           TailleChien
+  statut           StatutCommande @default(EN_ATTENTE)
+  total            Float
+  adresseLivr      String
+  dateExpedition   DateTime?
+  dateLivraison    DateTime?
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+
+  client       Client        @relation(fields: [clientId], references: [id])
+  formula      FormulaBox    @relation(fields: [formulaId], references: [id])
+  abonnement   Abonnement?   @relation(fields: [abonnementId], references: [id])
+  boxMensuelle BoxMensuelle? @relation(fields: [boxMensuelleId], references: [id])
+  selections   SelectionItem[]
+
+  @@map("commandes")
+}
+
+model SelectionItem {
+  id         String @id @default(cuid())
+  commandeId String
+  produitId  String
+  quantite   Int    @default(1)
+
+  commande Commande @relation(fields: [commandeId], references: [id], onDelete: Cascade)
+  produit  Produit  @relation(fields: [produitId], references: [id])
+
+  @@map("selection_items")
+}
+
+// ─── Divers ──────────────────────────────
+
+model Contact {
+  id        String   @id @default(cuid())
+  clientId  String?
+  prenom    String
+  nom       String
+  email     String
+  sujet     String
+  chien     String?
+  message   String
+  lu        Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  client Client? @relation(fields: [clientId], references: [id])
+
+  @@map("contacts")
+}
+
+model Newsletter {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  prenom    String?
+  actif     Boolean  @default(true)
+  createdAt DateTime @default(now())
+
+  @@map("newsletter")
+}
+
+model QuizResult {
+  id                String      @id @default(cuid())
+  clientId          String?
+  email             String?
+  nomChien          String
+  race              String?
+  poids             Float
+  age               Float
+  taille            TailleChien
+  estMacheur        Boolean     @default(false)
+  aDesAllergies     Boolean     @default(false)
+  allergies         String?
+  niveauActivite    String
+  typeBoxRecommande TypeBox
+  formulaId         String?
+  createdAt         DateTime    @default(now())
+
+  client Client? @relation(fields: [clientId], references: [id])
+
+  @@map("quiz_results")
+}
