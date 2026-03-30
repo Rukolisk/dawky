@@ -5,7 +5,7 @@ services:
 
   # ── Application Nuxt ────────────────────────────────────────
   app:
-    image: ghcr.io/${GITHUB_USERNAME}/dawky:latest
+    image: ghcr.io/rukolisk/dawky:latest
     container_name: dawky-app
     restart: unless-stopped
     env_file: .env.production
