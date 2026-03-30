@@ -1,11 +1,16 @@
 # docker-compose.yml — Dawky Production
-# Lancement : docker compose up -d
+# Première installation : docker compose up -d --build
+# Mises à jour suivantes via GitHub Actions (image depuis registry)
 
 services:
 
-  # ── Application Nuxt ────────────────────────────────────────
   app:
-    image: ghcr.io/${GITHUB_USERNAME}/dawky:latest
+    # En prod avec GitHub Actions → utilise l'image du registry
+    # Pour la 1ère install ou sans CI → on build localement
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: ghcr.io/${GITHUB_USERNAME:-dawky}/dawky:latest
     container_name: dawky-app
     restart: unless-stopped
     env_file: .env.production
@@ -18,9 +23,8 @@ services:
       interval: 30s
       timeout: 10s
       retries: 3
-      start_period: 15s
+      start_period: 20s
 
-  # ── Nginx reverse proxy ─────────────────────────────────────
   nginx:
     image: nginx:1.27-alpine
     container_name: dawky-nginx
@@ -33,19 +37,16 @@ services:
       - certbot-certs:/etc/letsencrypt:ro
       - certbot-www:/var/www/certbot:ro
     depends_on:
-      app:
-        condition: service_healthy
+      - app
     networks:
       - dawky-net
 
-  # ── Certbot — renouvellement SSL auto ───────────────────────
   certbot:
     image: certbot/certbot:latest
     container_name: dawky-certbot
     volumes:
       - certbot-certs:/etc/letsencrypt
       - certbot-www:/var/www/certbot
-    # Vérifie le renouvellement toutes les 12h
     entrypoint: /bin/sh -c "trap exit TERM; while :; do certbot renew --quiet; sleep 12h & wait $${!}; done"
 
 networks:
