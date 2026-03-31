@@ -1,6 +1,3 @@
-# .github/workflows/deploy.yml
-# Déploiement automatique sur le VPS à chaque push sur main
-
 name: 🚀 Deploy Dawky
 
 on:
@@ -35,44 +32,32 @@ jobs:
         with:
           context: .
           push: true
+          build-args: |
+            NUXT_PUBLIC_SUPABASE_URL=${{ secrets.NUXT_PUBLIC_SUPABASE_URL }}
+            NUXT_PUBLIC_SUPABASE_KEY=${{ secrets.NUXT_PUBLIC_SUPABASE_KEY }}
           tags: |
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
-            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
           cache-from: type=gha
-          cache-to:   type=gha,mode=max
+          cache-to: type=gha,mode=max
 
   deploy:
     name: 🌐 Deploy to VPS
     runs-on: ubuntu-latest
     needs: build-and-push
-    permissions:
-      packages: read
-
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
       - name: Deploy via SSH
         uses: appleboy/ssh-action@v1.0.0
         with:
-          host:     ${{ secrets.VPS_HOST }}
+          host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
-          key:      ${{ secrets.VPS_SSH_KEY }}
+          key: ${{ secrets.VPS_SSH_KEY }}
           script: |
             cd /opt/dawky
-
-            # Mettre à jour le code (pour nginx.conf etc.)
             git pull origin main
 
-            # S'authentifier au registry GitHub
-            echo "${{ secrets.GITHUB_TOKEN }}" | \
-              docker login ghcr.io -u ${{ github.actor }} --password-stdin
+            # Utiliser ton TOKEN perso ou une méthode de login stable sur le VPS
+            echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
 
-            # Récupérer la nouvelle image
-            docker pull ghcr.io/${{ github.repository_owner }}/dawky:latest
-
-            # Redémarrer l'app sans downtime
+            docker compose pull app
             docker compose up -d --no-build app
-
-            # Nettoyer les vieilles images
             docker image prune -f
