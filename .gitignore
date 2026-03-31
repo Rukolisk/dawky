@@ -21,3 +21,4 @@ dist/
 # Docker volumes
 certbot-certs/
 certbot-www/
+certbot/

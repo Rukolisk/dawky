@@ -11,7 +11,7 @@ import { defineConfig } from 'prisma/config'
 import * as dotenv from 'dotenv'
 
 // Charger .env pour les commandes CLI (hors contexte Nuxt)
-dotenv.config({ path: path.resolve(__dirname, '../.env') })
+dotenv.config({ path: path.resolve(__dirname, '../.env.production') })
 
 export default defineConfig({
   schema: path.join(__dirname, 'schema.prisma'),

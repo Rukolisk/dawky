@@ -36,11 +36,12 @@ export default defineNuxtConfig({
     emailReplyTo:      process.env.EMAIL_REPLY_TO ?? 'contact.dawky@gmail.com',
 
     public: {
-      supabaseUrl:      process.env.SUPABASE_URL,
-      supabaseAnonKey:  process.env.SUPABASE_ANON_KEY,
-      appUrl:           process.env.APP_URL ?? 'http://localhost:3000',
-      brandName:        'Dawky',
-    },
+  supabaseUrl:      process.env.NUXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL,
+  supabaseAnonKey:  process.env.NUXT_PUBLIC_SUPABASE_KEY || process.env.SUPABASE_ANON_KEY || process.env.SUPABASE_KEY,
+  supabaseKey:      process.env.NUXT_PUBLIC_SUPABASE_KEY || process.env.SUPABASE_ANON_KEY || process.env.SUPABASE_KEY, // <--- AJOUTE CETTE LIGNE
+  appUrl:           process.env.APP_URL ?? 'http://localhost:3000',
+  brandName:        'Dawky',
+},
   },
 
   typescript: { strict: true, typeCheck: false },
