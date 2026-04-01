@@ -25,4 +25,4 @@ certbot/
 
 # déploiement tuto
 DEPLOIEMENT.md
-.github/*
+.github/workflows/*.local.yml
