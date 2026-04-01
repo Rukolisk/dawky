@@ -22,3 +22,7 @@ dist/
 certbot-certs/
 certbot-www/
 certbot/
+
+# déploiement tuto
+DEPLOIEMENT.md
+.github/*
