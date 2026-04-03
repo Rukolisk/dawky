@@ -13,7 +13,7 @@ services:
       args:
         - NUXT_PUBLIC_SUPABASE_URL=${NUXT_PUBLIC_SUPABASE_URL}
         - NUXT_PUBLIC_SUPABASE_KEY=${NUXT_PUBLIC_SUPABASE_KEY}
-    image: ghcr.io/${rukolisk:-dawky}/dawky:latest
+    image: ghcr.io/rukolisk/dawky:latest
     container_name: dawky-app
     restart: unless-stopped
     env_file: .env.production
