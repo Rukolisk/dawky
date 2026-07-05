@@ -1,4 +1,3 @@
-<!-- app.vue -->
 <template>
   <div>
     <NuxtLayout>
@@ -9,5 +8,5 @@
 
 <script setup lang="ts">
 const { init } = useAuth()
-onMounted(() => { init() })
+onMounted(() => init())
 </script>

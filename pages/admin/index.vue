@@ -1,786 +1,644 @@
-<!-- pages/admin/index.vue -->
 <template>
-  <div class="admin-layout">
+  <div class="admin-page">
 
-    <!-- ═══ SIDEBAR ═══ -->
-    <aside class="sidebar">
-      <div class="sidebar__brand">
-        <div class="sidebar__logo">DAWKY</div>
-        <div class="sidebar__badge">Admin</div>
+    <!-- Header admin -->
+    <div class="admin-header">
+      <div class="container admin-header-inner">
+        <div class="admin-logo-row">
+          <img :src="images.logo_dawky_blanc" alt="Dawky" class="admin-logo" />
+          <span class="admin-badge">⚙️ Admin</span>
+        </div>
+        <div class="admin-user">
+          <span class="text-white text-sm">{{ profile?.prenom }} {{ profile?.nom }}</span>
+          <button class="btn btn-white btn-sm" @click="signOut">Déconnexion</button>
+        </div>
       </div>
+    </div>
 
-      <nav class="sidebar__nav">
-        <button v-for="tab in tabs" :key="tab.id"
-          :class="['sidebar__item', { active: activeTab === tab.id }]"
-          @click="activeTab = tab.id">
-          <span>{{ tab.icon }}</span>
-          <span>{{ tab.label }}</span>
-          <span v-if="tab.badge" class="sidebar__badge-count">{{ tab.badge }}</span>
-        </button>
-      </nav>
+    <div class="admin-layout">
+      <!-- Sidebar -->
+      <aside class="admin-sidebar">
+        <nav class="admin-nav">
+          <button
+            v-for="tab in tabs"
+            :key="tab.key"
+            class="admin-nav-item"
+            :class="{ active: activeTab === tab.key }"
+            @click="activeTab = tab.key"
+          >
+            <span class="admin-nav-icon">{{ tab.icon }}</span>
+            <span>{{ tab.label }}</span>
+            <span v-if="tab.badge" class="admin-nav-badge">{{ tab.badge }}</span>
+          </button>
+        </nav>
+      </aside>
 
-      <div class="sidebar__footer">
-        <div class="sidebar__user">{{ authUser?.prenom }} {{ authUser?.nom }}</div>
-        <NuxtLink to="/" class="sidebar__back">← Site</NuxtLink>
-      </div>
-    </aside>
+      <!-- Main -->
+      <main class="admin-main">
 
-    <!-- ═══ CONTENU ═══ -->
-    <main class="admin-main">
+        <!-- ═══ OVERVIEW ═════════════════════════════ -->
+        <div v-if="activeTab === 'overview'" class="admin-section animate-fade-in-up">
+          <h2 class="admin-section-title">Tableau de bord</h2>
+          <div class="kpi-grid">
+            <div v-for="kpi in kpis" :key="kpi.label" class="kpi-card">
+              <div class="kpi-icon">{{ kpi.icon }}</div>
+              <div class="kpi-value">{{ kpi.value }}</div>
+              <div class="kpi-label">{{ kpi.label }}</div>
+            </div>
+          </div>
 
-      <!-- ════════════════ PRODUITS ════════════════ -->
-      <section v-if="activeTab === 'produits'" class="admin-section">
-        <div class="section-head">
-          <h1>Catalogue Produits</h1>
-          <button class="btn btn-primary" @click="openCreate">+ Nouveau produit</button>
-        </div>
-
-        <div class="chips-row">
-          <button v-for="f in catFilters" :key="String(f.value)"
-            :class="['chip', { active: filterCat === f.value }]"
-            @click="filterCat = f.value">{{ f.label }}</button>
-          <label class="check-filter">
-            <input v-model="onlyInvendus" type="checkbox" /> Invendus seulement
-          </label>
-        </div>
-
-        <DawkySpinner v-if="produitsLoading" />
-
-        <div v-else class="table-wrap">
-          <table class="dtable">
-            <thead><tr>
-              <th>Produit</th><th>Catégorie</th><th>Tailles</th>
-              <th>Stock</th><th>Invendu</th><th>Actif</th><th></th>
-            </tr></thead>
-            <tbody>
-              <tr v-for="p in filteredProduits" :key="p.id"
-                :class="{ 'tr-invendu': p.estInvendu, 'tr-off': !p.actif }">
-                <td>
-                  <span class="p-emoji">{{ p.emoji }}</span>
-                  <div style="display:inline-block;vertical-align:middle">
-                    <div class="p-nom">{{ p.nom }}</div>
-                    <div v-if="p.moisOrigine" class="p-origine">{{ p.moisOrigine }}</div>
-                  </div>
-                </td>
-                <td><span class="cat-chip">{{ catLabels[p.categorie] }}</span></td>
-                <td>
-                  <span v-for="t in p.tailles" :key="t.taille" class="size-pill">{{ t.taille }}</span>
-                </td>
-                <td>
-                  <input type="number" min="0" :value="p.stock" class="stock-input"
-                    @change="patchStock(p.id, Number(($event.target as HTMLInputElement).value))" />
-                </td>
-                <td>
-                  <button :class="['inv-btn', p.estInvendu ? 'inv-on' : 'inv-off']"
-                    @click="patchProduit(p.id, { estInvendu: !p.estInvendu })">
-                    {{ p.estInvendu ? '✓' : '—' }}
-                  </button>
-                </td>
-                <td><span :class="p.actif ? 'dot-on' : 'dot-off'">●</span></td>
-                <td>
-                  <button class="icon-btn" @click="openEdit(p)">✏️</button>
-                  <button class="icon-btn icon-btn-del" @click="deleteProduit(p.id)">🗑</button>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </section>
-
-      <!-- ════════════════ BOX DU MOIS ════════════════ -->
-      <section v-if="activeTab === 'boxes'" class="admin-section">
-        <div class="section-head">
-          <h1>Box du Mois</h1>
-          <div style="display:flex;gap:.8rem;align-items:center">
-            <select v-model="selectedMois" class="mois-select">
-              <option v-for="m in moisList" :key="m" :value="m">{{ fmtMois(m) }}</option>
-            </select>
-            <button class="btn btn-outline btn-sm" @click="addNextMonth">+ Mois suivant</button>
+          <!-- Actions rapides -->
+          <h3 class="admin-subtitle">Actions rapides</h3>
+          <div class="quick-actions">
+            <button class="quick-action" @click="activeTab = 'boxes'">
+              <span>📦</span> <span>Gérer les box du mois</span>
+            </button>
+            <button class="quick-action" @click="activeTab = 'produits'">
+              <span>🛒</span> <span>Ajouter un produit</span>
+            </button>
+            <button class="quick-action" @click="activeTab = 'commandes'">
+              <span>📋</span> <span>Voir les commandes</span>
+            </button>
+            <button class="quick-action" @click="activeTab = 'invendus'">
+              <span>🏷️</span> <span>Gérer les invendus</span>
+            </button>
           </div>
         </div>
 
-        <!-- Info mois -->
-        <div class="mois-info-bar">
-          <span>📅 Expédition le <strong>1er {{ fmtMois(selectedMois) }}</strong></span>
-          <span v-for="(n, t) in abonnesMap" :key="t">
-            Taille <strong>{{ t }}</strong> : {{ n }} abonné(s)
-          </span>
-          <div style="margin-left:auto;display:flex;gap:.6rem;align-items:center">
-            <button v-if="peutValider" class="btn btn-primary btn-sm" @click="validerMois">
-              ✓ Valider les 3 boxes
-            </button>
-            <button v-if="peutCloturer" class="btn btn-sm" style="background:var(--danger);color:white" @click="showCloture=true">
-              Clôturer ce mois
-            </button>
-            <span v-if="statutGlobal !== 'BROUILLON'" :class="['statut-badge', `sbadge-${statutGlobal.toLowerCase()}`]">
-              {{ statutLabels[statutGlobal] }}
-            </span>
+        <!-- ═══ BOX MENSUELLES ════════════════════════ -->
+        <div v-if="activeTab === 'boxes'" class="admin-section animate-fade-in-up">
+          <div class="admin-section-header">
+            <h2 class="admin-section-title">📦 Box Mensuelles</h2>
+            <button class="btn btn-primary btn-sm" @click="openCreateBox = true">+ Créer une box</button>
           </div>
-        </div>
 
-        <!-- 3 colonnes S / M / L -->
-        <div class="box-editor-grid">
-          <div v-for="taille in (['XS','S','M','L'] as const)" :key="taille" class="box-col">
+          <!-- Filtre mois -->
+          <div class="admin-filters">
+            <input v-model="filterMois" type="month" class="form-input admin-filter-input" />
+          </div>
 
-            <!-- En-tête colonne -->
-            <div class="box-col__head">
-              <span class="box-col__letter">{{ taille }}</span>
-              <div>
-                <div class="box-col__poids">{{ tailleDesc[taille] }}</div>
-                <div class="box-col__abonnes">{{ abonnesMap[taille] ?? 0 }} abonné(s)</div>
+          <!-- Loading -->
+          <div v-if="boxesLoading" class="admin-loading">Chargement…</div>
+
+          <!-- Boxes grid -->
+          <div v-else class="boxes-admin-grid">
+            <div v-for="box in boxesMensuelles" :key="box.id" class="box-admin-card">
+              <div class="box-admin-header">
+                <div class="box-admin-taille">{{ box.taille }}</div>
+                <span class="badge" :class="statutBoxColor[box.statut]">{{ statutBoxLabel[box.statut] }}</span>
               </div>
-            </div>
-
-            <!-- Thème -->
-            <div class="box-col__body">
-              <label class="field-label">Thème du mois</label>
-              <input
-                v-model="forms[taille].theme"
-                type="text"
-                class="form-input"
-                placeholder="Ex: Printemps en forêt 🌸"
-                :disabled="estVerrouille"
-              />
-            </div>
-
-            <!-- Liste des produits ajoutés -->
-            <div class="box-col__items">
-              <div class="box-col__items-title">
-                Produits dans la box
-                <span class="items-count">{{ forms[taille].items.length }}</span>
+              <div class="box-admin-mois">{{ formatMois(box.mois) }}</div>
+              <div v-if="box.theme" class="box-admin-theme">🎨 {{ box.theme }}</div>
+              <div class="box-admin-items">
+                <span v-for="item in box.items?.slice(0, 3)" :key="item.id" class="box-item-chip">
+                  {{ item.produit?.emoji }} {{ item.produit?.nom }}
+                </span>
+                <span v-if="(box.items?.length ?? 0) > 3" class="box-item-more">+{{ box.items.length - 3 }}</span>
               </div>
-
-              <div v-if="forms[taille].items.length === 0" class="items-empty">
-                Aucun produit — utilisez le sélecteur ci-dessous
-              </div>
-
-              <div v-for="(item, i) in forms[taille].items" :key="i" class="item-row">
-                <span class="item-emoji">{{ getProduit(item.produitId)?.emoji ?? '📦' }}</span>
-                <span class="item-nom">{{ getProduit(item.produitId)?.nom ?? item.produitId }}</span>
-                <input v-model.number="item.quantite" type="number" min="1" class="item-qty" :disabled="estVerrouille" />
-                <button v-if="!estVerrouille" class="item-del" @click="removeItem(taille, i)">✕</button>
-              </div>
-            </div>
-
-            <!-- ─── SÉLECTEUR DE PRODUIT ─── -->
-            <div v-if="!estVerrouille" class="box-col__add">
-              <div class="add-label">
-                ➕ Ajouter un produit dans la box {{ taille }}
-              </div>
-
-              <!-- Filtre catégorie pour le picker -->
-              <div class="add-cat-filter">
-                <button v-for="f in catFiltersShort" :key="String(f.value)"
-                  :class="['cat-chip-btn', { active: pickerCat[taille] === f.value }]"
-                  @click="pickerCat[taille] = f.value">
-                  {{ f.label }}
-                </button>
-              </div>
-
-              <!-- Liste de produits filtrés par taille ET catégorie -->
-              <div class="add-produits-list">
-                <div v-if="pickerProduits(taille).length === 0" class="picker-empty">
-                  Aucun produit disponible pour la taille {{ taille }}
-                </div>
+              <div class="box-admin-actions">
                 <button
-                  v-for="p in pickerProduits(taille)"
-                  :key="p.id"
-                  :class="['picker-row', { 'picker-row--added': forms[taille].items.some(i => i.produitId === p.id), 'picker-row--invendu': p.estInvendu }]"
-                  :disabled="forms[taille].items.some(i => i.produitId === p.id)"
-                  @click="addItem(taille, p.id)"
+                  v-if="box.statut === 'BROUILLON'"
+                  class="btn btn-primary btn-sm"
+                  @click="validerBox(box.id)"
                 >
-                  <span>{{ p.emoji }}</span>
-                  <span class="picker-row__nom">{{ p.nom }}</span>
-                  <span v-if="p.estInvendu" class="picker-row__inv-badge">♻️ invendu</span>
-                  <span class="picker-row__stock">{{ p.stock }} en stock</span>
-                  <span v-if="forms[taille].items.some(i => i.produitId === p.id)" class="picker-row__check">✓</span>
-                  <span v-else class="picker-row__plus">+</span>
+                  ✅ Valider
+                </button>
+                <button
+                  v-if="box.statut === 'VALIDEE'"
+                  class="btn btn-yellow btn-sm"
+                  @click="cloturerBox(box.id)"
+                >
+                  🔒 Clôturer
                 </button>
               </div>
             </div>
-
-            <!-- Bouton sauvegarder -->
-            <div class="box-col__footer" v-if="!estVerrouille">
-              <button class="btn btn-primary btn-full"
-                :disabled="saving[taille] || forms[taille].items.length === 0"
-                @click="saveBox(taille)">
-                {{ saving[taille] ? 'Sauvegarde…' : '💾 Sauvegarder la box ' + taille }}
-              </button>
+            <div v-if="boxesMensuelles.length === 0" class="admin-empty">
+              Aucune box pour ce mois. <button class="link-btn" @click="openCreateBox = true">En créer une ?</button>
             </div>
           </div>
         </div>
-      </section>
 
-      <!-- ════════════════ INVENDUS ════════════════ -->
-      <section v-if="activeTab === 'invendus'" class="admin-section">
-        <div class="section-head">
-          <h1>Invendus</h1>
-          <span v-if="invendusData" class="count-badge">{{ invendusData.stockTotal }} unités</span>
-        </div>
-
-        <div class="alert alert-info" style="margin-bottom:1.5rem">
-          Ces produits sont automatiquement proposés dans la <strong>Box À la Carte</strong>.
-          Ils proviennent des mois précédents après clôture.
-        </div>
-
-        <DawkySpinner v-if="!invendusData" />
-
-        <div v-else>
-          <div v-if="invendusData.stockTotal === 0" class="empty-state">
-            🎉 Aucun invendu — tout le stock est écoulé !
+        <!-- ═══ PRODUITS ═══════════════════════════════ -->
+        <div v-if="activeTab === 'produits'" class="admin-section animate-fade-in-up">
+          <div class="admin-section-header">
+            <h2 class="admin-section-title">🛒 Produits</h2>
+            <button class="btn btn-primary btn-sm" @click="openProduitForm = !openProduitForm">
+              {{ openProduitForm ? 'Annuler' : '+ Ajouter' }}
+            </button>
           </div>
-          <div v-for="(items, mois) in invendusData.parMois" :key="mois" class="inv-groupe">
-            <h3 class="inv-groupe__title">📦 {{ fmtMois(String(mois)) }}</h3>
-            <div class="inv-grid">
-              <div v-for="p in items" :key="p.id" class="inv-card">
-                <span class="inv-card__emoji">{{ p.emoji }}</span>
-                <div class="inv-card__info">
-                  <div class="inv-card__nom">{{ p.nom.replace(/ \[Invendu.*\]/, '') }}</div>
-                  <div style="display:flex;gap:.3rem;margin-top:.2rem">
-                    <span v-for="t in p.tailles" :key="t.taille" class="size-pill">{{ t.taille }}</span>
-                  </div>
-                </div>
-                <div class="inv-card__right">
-                  <input type="number" min="0" :value="p.stock" class="stock-input"
-                    @change="patchStock(p.id, Number(($event.target as HTMLInputElement).value))" />
-                  <span class="inv-card__label">en stock</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
 
-      <!-- ════════════════ COMMANDES ════════════════ -->
-      <section v-if="activeTab === 'commandes'" class="admin-section">
-        <div class="section-head"><h1>Commandes récentes</h1></div>
-        <div class="table-wrap">
-          <table class="dtable">
-            <thead><tr><th>Client</th><th>Formule</th><th>Taille</th><th>Total</th><th>Statut</th><th>Date</th></tr></thead>
-            <tbody>
-              <tr v-for="c in commandes" :key="c.id">
-                <td>
-                  <div class="p-nom">{{ c.client.prenom }} {{ c.client.nom }}</div>
-                  <div class="p-origine">{{ c.client.email }}</div>
-                </td>
-                <td>{{ c.formula?.nom ?? '—' }}</td>
-                <td><span class="size-pill">{{ c.taille }}</span></td>
-                <td style="font-weight:700;color:var(--bleu-vif)">{{ c.total.toFixed(2) }}€</td>
-                <td><span :class="['s-chip', `s-${c.statut.toLowerCase()}`]">{{ statutCmd[c.statut] }}</span></td>
-                <td style="color:var(--muted);font-size:.8rem">{{ new Date(c.createdAt).toLocaleDateString('fr-FR') }}</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </section>
-
-    </main>
-
-    <!-- ═══ MODAL PRODUIT ═══ -->
-    <Teleport to="body">
-      <Transition name="modal">
-        <div v-if="modal.open" class="modal-bg" @click.self="modal.open = false">
-          <div class="modal-box card">
-            <div class="modal-head">
-              <h2>{{ modal.mode === 'create' ? 'Nouveau produit' : 'Modifier le produit' }}</h2>
-              <button @click="modal.open = false">✕</button>
-            </div>
-            <form @submit.prevent="saveProduit">
-              <div class="form-row">
-                <div class="form-group">
-                  <label class="form-label">Emoji</label>
-                  <input v-model="modal.f.emoji" class="form-input" />
-                </div>
-                <div class="form-group">
-                  <label class="form-label">Nom *</label>
-                  <input v-model="modal.f.nom" class="form-input" required />
-                </div>
+          <!-- Formulaire ajout -->
+          <div v-if="openProduitForm" class="admin-form-panel animate-fade-in-up">
+            <h3 class="admin-subtitle">{{ editProduit ? 'Modifier le produit' : 'Nouveau produit' }}</h3>
+            <div class="admin-form-grid">
+              <div class="form-group">
+                <label class="form-label">Nom *</label>
+                <input v-model="produitForm.nom" type="text" class="form-input" placeholder="Ex: Bois de cerf taille S" />
               </div>
               <div class="form-group">
+                <label class="form-label">Emoji</label>
+                <input v-model="produitForm.emoji" type="text" class="form-input" placeholder="🦌" maxlength="4" />
+              </div>
+              <div class="form-group" style="grid-column:1/-1">
                 <label class="form-label">Description *</label>
-                <textarea v-model="modal.f.description" class="form-textarea" required />
-              </div>
-              <div class="form-row">
-                <div class="form-group">
-                  <label class="form-label">Catégorie *</label>
-                  <select v-model="modal.f.categorie" class="form-select" required>
-                    <option v-for="c in categories" :key="c.v" :value="c.v">{{ c.l }}</option>
-                  </select>
-                </div>
-                <div class="form-group">
-                  <label class="form-label">Stock</label>
-                  <input v-model.number="modal.f.stock" type="number" min="0" class="form-input" />
-                </div>
+                <textarea v-model="produitForm.description" class="form-textarea" rows="2" placeholder="Description du produit…" />
               </div>
               <div class="form-group">
-                <label class="form-label">Tailles disponibles *</label>
-                <div style="display:flex;gap:1.2rem;margin-top:.3rem">
-                  <label v-for="t in ['XS','S','M','L']" :key="t" style="display:flex;align-items:center;gap:.35rem;font-weight:500;cursor:pointer">
-                    <input v-model="modal.f.tailles" type="checkbox" :value="t" /> {{ t }}
+                <label class="form-label">Catégorie *</label>
+                <select v-model="produitForm.categorie" class="form-select">
+                  <option value="">— Choisir —</option>
+                  <option v-for="c in categoriesAdmin" :key="c.value" :value="c.value">{{ c.icon }} {{ c.label }}</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Stock initial</label>
+                <input v-model.number="produitForm.stock" type="number" class="form-input" min="0" placeholder="0" />
+              </div>
+              <div class="form-group" style="grid-column:1/-1">
+                <label class="form-label">Tailles disponibles</label>
+                <div class="taille-checkboxes">
+                  <label v-for="t in ['XS','S','M','L']" :key="t" class="taille-check-label">
+                    <input type="checkbox" :value="t" v-model="produitForm.tailles" />
+                    {{ t }}
                   </label>
                 </div>
               </div>
-              <div style="display:flex;gap:1.5rem;margin-top:.5rem">
-                <label style="display:flex;align-items:center;gap:.35rem;font-size:.88rem;cursor:pointer">
-                  <input v-model="modal.f.estInvendu" type="checkbox" /> Marquer invendu
-                </label>
-                <label style="display:flex;align-items:center;gap:.35rem;font-size:.88rem;cursor:pointer">
-                  <input v-model="modal.f.actif" type="checkbox" /> Actif
-                </label>
-              </div>
-              <div v-if="modal.err" class="alert alert-error" style="margin-top:1rem">{{ modal.err }}</div>
-              <div class="modal-foot">
-                <button type="button" class="btn btn-outline" @click="modal.open = false">Annuler</button>
-                <button type="submit" class="btn btn-primary" :disabled="modal.saving">
-                  {{ modal.saving ? '…' : 'Enregistrer' }}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      </Transition>
-
-      <!-- Modal clôture -->
-      <Transition name="modal">
-        <div v-if="showCloture" class="modal-bg" @click.self="showCloture = false">
-          <div class="modal-box card" style="max-width:460px">
-            <div class="modal-head">
-              <h2>Clôturer {{ fmtMois(selectedMois) }}</h2>
-              <button @click="showCloture = false">✕</button>
             </div>
-            <p style="color:var(--muted);line-height:1.7;margin-bottom:1.2rem">
-              La clôture calcule les invendus et les ajoute au catalogue <strong>Box À la Carte</strong>.
-              Cette action est irréversible.
-            </p>
-            <div v-if="clotureErr" class="alert alert-error">{{ clotureErr }}</div>
-            <div class="modal-foot">
-              <button class="btn btn-outline" @click="showCloture = false">Annuler</button>
-              <button class="btn btn-primary" style="background:var(--danger)" :disabled="cloturing" @click="cloturerMois">
-                {{ cloturing ? 'Clôture…' : 'Confirmer' }}
+            <div class="admin-form-actions">
+              <button class="btn btn-primary" :disabled="produitLoading" @click="saveProduit">
+                {{ produitLoading ? 'Sauvegarde…' : editProduit ? '💾 Modifier' : '✅ Ajouter le produit' }}
               </button>
+              <button class="btn btn-ghost" @click="resetProduitForm">Annuler</button>
             </div>
           </div>
-        </div>
-      </Transition>
-    </Teleport>
 
-    <DawkyToast />
+          <!-- Table produits -->
+          <div class="admin-table-wrap">
+            <table class="admin-table">
+              <thead>
+                <tr>
+                  <th>Produit</th>
+                  <th>Catégorie</th>
+                  <th>Tailles</th>
+                  <th>Stock</th>
+                  <th>Statut</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="p in produitsAdmin" :key="p.id">
+                  <td class="produit-cell">
+                    <span class="produit-cell-emoji">{{ p.emoji }}</span>
+                    <div>
+                      <p class="font-semibold">{{ p.nom }}</p>
+                      <p class="text-xs text-muted produit-desc-trunc">{{ p.description }}</p>
+                    </div>
+                  </td>
+                  <td>
+                    <span class="badge" :class="catColors[p.categorie]">{{ catLabels[p.categorie] }}</span>
+                  </td>
+                  <td>
+                    <div class="taille-chips">
+                      <span v-for="t in p.tailles" :key="t.taille" class="size-chip size-chip-sm">{{ t.taille }}</span>
+                    </div>
+                  </td>
+                  <td>
+                    <span :class="p.stock < 5 ? 'text-rose font-semibold' : ''">{{ p.stock }}</span>
+                  </td>
+                  <td>
+                    <span class="badge" :class="p.actif ? 'badge-green' : 'badge-rose'">{{ p.actif ? 'Actif' : 'Inactif' }}</span>
+                  </td>
+                  <td>
+                    <div class="row-actions">
+                      <button class="btn btn-ghost btn-sm" @click="startEditProduit(p)">✏️</button>
+                      <button class="btn btn-ghost btn-sm" @click="deleteProduit(p.id)">🗑️</button>
+                    </div>
+                  </td>
+                </tr>
+                <tr v-if="produitsAdmin.length === 0">
+                  <td colspan="6" class="admin-empty">Aucun produit.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- ═══ COMMANDES ═══════════════════════════════ -->
+        <div v-if="activeTab === 'commandes'" class="admin-section animate-fade-in-up">
+          <h2 class="admin-section-title">📋 Commandes</h2>
+          <div class="admin-table-wrap">
+            <table class="admin-table">
+              <thead>
+                <tr>
+                  <th>Ref</th>
+                  <th>Client</th>
+                  <th>Formule</th>
+                  <th>Taille</th>
+                  <th>Total</th>
+                  <th>Statut</th>
+                  <th>Date</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="c in commandesAdmin" :key="c.id">
+                  <td class="font-mono text-sm">#{{ c.id.slice(-8).toUpperCase() }}</td>
+                  <td>
+                    <div>
+                      <p class="font-semibold text-sm">{{ c.client?.prenom }} {{ c.client?.nom }}</p>
+                      <p class="text-xs text-muted">{{ c.client?.email }}</p>
+                    </div>
+                  </td>
+                  <td class="text-sm">{{ c.formula?.nom }}</td>
+                  <td><span class="size-chip">{{ c.taille }}</span></td>
+                  <td class="font-semibold">{{ c.total?.toFixed(2) }}&nbsp;€</td>
+                  <td><span class="badge" :class="statutColor[c.statut]">{{ statutLabel[c.statut] }}</span></td>
+                  <td class="text-sm text-muted">{{ formatDate(c.createdAt) }}</td>
+                </tr>
+                <tr v-if="commandesAdmin.length === 0">
+                  <td colspan="7" class="admin-empty">Aucune commande.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- ═══ INVENDUS ══════════════════════════════ -->
+        <div v-if="activeTab === 'invendus'" class="admin-section animate-fade-in-up">
+          <h2 class="admin-section-title">🏷️ Invendus (Box À la Carte)</h2>
+          <p class="text-soft mb-5">Ces produits sont issus des box Surprise non expédiées et sont proposés dans la Box À la Carte.</p>
+          <div class="admin-table-wrap">
+            <table class="admin-table">
+              <thead>
+                <tr><th>Produit</th><th>Catégorie</th><th>Mois d'origine</th><th>Stock restant</th></tr>
+              </thead>
+              <tbody>
+                <tr v-for="p in invendus" :key="p.id">
+                  <td class="produit-cell">
+                    <span class="produit-cell-emoji">{{ p.emoji }}</span>
+                    <span class="font-semibold">{{ p.nom }}</span>
+                  </td>
+                  <td><span class="badge badge-rose">{{ catLabels[p.categorie] }}</span></td>
+                  <td class="text-sm">{{ formatMois(p.moisOrigine) }}</td>
+                  <td><span :class="p.stock < 3 ? 'text-rose font-semibold' : ''">{{ p.stock }}</span></td>
+                </tr>
+                <tr v-if="invendus.length === 0"><td colspan="4" class="admin-empty">Aucun invendu.</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+      </main>
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
-definePageMeta({ middleware: 'admin', layout: false })
-useSeoMeta({ title: 'Admin — Dawky' })
+import { dawkyImages } from '~/composables/useDawkyImages'
+const images = dawkyImages
 
-const { user: authUser } = useAuth()
-const { success: ok, error: nok } = useToast()
+definePageMeta({ layout: false })
 
-function H() { return { 'x-supabase-uid': (authUser.value as any)?.supabaseUid ?? '' } }
+const { profile, signOut, isAdmin } = useAuth()
+watch(isAdmin, (v) => { if (!v) navigateTo('/') }, { immediate: true })
 
-// ─── Tabs ───
-const activeTab = ref<'produits'|'boxes'|'invendus'|'commandes'>('produits')
-const tabs = computed(() => [
-  { id: 'produits'  as const, icon: '📦', label: 'Produits' },
-  { id: 'boxes'     as const, icon: '🗓️', label: 'Box du Mois' },
-  { id: 'invendus'  as const, icon: '♻️', label: 'Invendus', badge: invendusBadge.value },
-  { id: 'commandes' as const, icon: '🛒', label: 'Commandes' },
+const activeTab = ref('overview')
+
+const tabs = [
+  { key: 'overview',  icon: '📊', label: 'Vue d\'ensemble' },
+  { key: 'boxes',     icon: '📦', label: 'Box mensuelles' },
+  { key: 'produits',  icon: '🛒', label: 'Produits' },
+  { key: 'commandes', icon: '📋', label: 'Commandes' },
+  { key: 'invendus',  icon: '🏷️', label: 'Invendus' },
+]
+
+// ── KPIs
+const kpis = ref([
+  { icon: '📦', value: '—', label: 'Box ce mois' },
+  { icon: '🛍️', value: '—', label: 'Commandes totales' },
+  { icon: '🐾', value: '—', label: 'Abonnés actifs' },
+  { icon: '🏷️', value: '—', label: 'Invendus' },
 ])
 
-// ─── Constantes ───
-const catFilters = [
-  { value: undefined, label: 'Tous' },
-  { value: 'MASTICATION', label: '🦌 Mastication' },
-  { value: 'NUTRITION',   label: '🍖 Nutrition' },
-  { value: 'JOUET',       label: '🎾 Jouets' },
-  { value: 'SOIN',        label: '🧴 Soins' },
-  { value: 'ACCESSOIRE',  label: '🎀 Accessoires' },
-]
-const catFiltersShort = [
-  { value: undefined,     label: 'Tous' },
-  { value: 'MASTICATION', label: '🦌' },
-  { value: 'NUTRITION',   label: '🍖' },
-  { value: 'JOUET',       label: '🎾' },
-  { value: 'SOIN',        label: '🧴' },
-  { value: 'ACCESSOIRE',  label: '🎀' },
-]
-const catLabels: Record<string,string> = { MASTICATION:'🦌 Mast.', NUTRITION:'🍖 Nutr.', JOUET:'🎾 Jouet', SOIN:'🧴 Soin', ACCESSOIRE:'🎀 Acc.' }
-const categories = [ {v:'MASTICATION',l:'🦌 Mastication'},{v:'NUTRITION',l:'🍖 Nutrition'},{v:'JOUET',l:'🎾 Jouets'},{v:'SOIN',l:'🧴 Soins'},{v:'ACCESSOIRE',l:'🎀 Accessoires'} ]
-const tailleDesc: Record<string,string> = { XS:'≤ 4 kg', S:'4–10 kg', M:'10–25 kg', L:'> 25 kg' }
-const statutLabels: Record<string,string> = { BROUILLON:'Brouillon', VALIDEE:'✓ Validée', EXPEDIEE:'🚚 Expédiée', CLOTUREE:'Clôturée' }
-const statutCmd: Record<string,string> = { EN_ATTENTE:'⏳', CONFIRMEE:'✓', PREPAREE:'📦', EXPEDIEE:'🚚', LIVREE:'✅', ANNULEE:'❌' }
+// ── BOX MENSUELLES
+const filterMois = ref(new Date().toISOString().slice(0, 7))
+const boxesLoading = ref(false)
+const boxesMensuelles = ref<any[]>([])
+const openCreateBox = ref(false)
 
-// ══════════════ PRODUITS ══════════════
-type Produit = { id:string; nom:string; description:string; emoji:string; categorie:string; stock:number; estInvendu:boolean; actif:boolean; moisOrigine:string|null; tailles:{taille:string}[] }
-
-const produits        = ref<Produit[]>([])
-const produitsLoading = ref(true)
-const filterCat       = ref<string|undefined>(undefined)
-const onlyInvendus    = ref(false)
-
-const filteredProduits = computed(() =>
-  produits.value.filter(p => {
-    if (filterCat.value && p.categorie !== filterCat.value) return false
-    if (onlyInvendus.value && !p.estInvendu) return false
-    return true
-  })
-)
-
-const modal = reactive({
-  open: false, mode: 'create' as 'create'|'edit', editId: '',
-  saving: false, err: '',
-  f: { nom:'', description:'', emoji:'📦', categorie:'JOUET', tailles:[] as string[], stock:0, estInvendu:false, actif:true },
-})
-
-function openCreate() {
-  modal.mode = 'create'
-  modal.f = { nom:'', description:'', emoji:'📦', categorie:'JOUET', tailles:[], stock:0, estInvendu:false, actif:true }
-  modal.err = ''; modal.open = true
+async function fetchBoxes() {
+  boxesLoading.value = true
+  try {
+    const data = await $fetch('/api/admin/boxes-mensuelles', { query: { mois: filterMois.value } })
+    boxesMensuelles.value = (data as any).data ?? []
+  } finally { boxesLoading.value = false }
 }
-function openEdit(p: Produit) {
-  modal.mode = 'edit'; modal.editId = p.id
-  modal.f = { nom:p.nom, description:p.description, emoji:p.emoji, categorie:p.categorie, tailles:p.tailles.map(t=>t.taille), stock:p.stock, estInvendu:p.estInvendu, actif:p.actif }
-  modal.err = ''; modal.open = true
+
+watch(filterMois, fetchBoxes, { immediate: true })
+
+async function validerBox(id: string) {
+  await $fetch('/api/admin/boxes-mensuelles/valider', { method: 'POST', body: { id } })
+  fetchBoxes()
 }
+async function cloturerBox(id: string) {
+  await $fetch('/api/admin/boxes-mensuelles/cloturer', { method: 'POST', body: { id } })
+  fetchBoxes()
+}
+
+// ── PRODUITS
+const produitsAdmin = ref<any[]>([])
+const openProduitForm = ref(false)
+const produitLoading = ref(false)
+const editProduit = ref<any>(null)
+const produitForm = reactive({ nom: '', emoji: '📦', description: '', categorie: '', stock: 0, tailles: [] as string[] })
+
+async function fetchProduits() {
+  const data = await $fetch('/api/admin/produits')
+  produitsAdmin.value = (data as any).data?.produits ?? []
+}
+
+watch(() => activeTab.value === 'produits', (v) => { if (v) fetchProduits() }, { immediate: true })
+
 async function saveProduit() {
-  modal.saving = true; modal.err = ''
+  produitLoading.value = true
   try {
-    if (modal.mode === 'create') {
-      const r = await $fetch<any>('/api/admin/produits', { method:'POST', body:modal.f, headers:H() })
-      produits.value.unshift(r.data); ok('Produit créé ✓')
+    if (editProduit.value) {
+      await $fetch(`/api/admin/produits/${editProduit.value.id}`, { method: 'PUT', body: produitForm })
     } else {
-      const r = await $fetch<any>(`/api/admin/produits/${modal.editId}`, { method:'PUT', body:modal.f, headers:H() })
-      const i = produits.value.findIndex(p=>p.id===modal.editId)
-      if (i !== -1) produits.value[i] = r.data; ok('Mis à jour ✓')
+      await $fetch('/api/admin/produits', { method: 'POST', body: produitForm })
     }
-    modal.open = false
-  } catch(e:any) { modal.err = e?.data?.statusMessage ?? 'Erreur' }
-  finally { modal.saving = false }
-}
-async function patchProduit(id:string, data:Partial<Produit>) {
-  try {
-    const r = await $fetch<any>(`/api/admin/produits/${id}`, { method:'PUT', body:data, headers:H() })
-    const i = produits.value.findIndex(p=>p.id===id)
-    if (i !== -1) produits.value[i] = r.data
-    if ('estInvendu' in data) await loadInvendus()
-  } catch { nok('Erreur') }
-}
-async function patchStock(id:string, stock:number) {
-  await patchProduit(id, { stock } as any)
-}
-async function deleteProduit(id:string) {
-  if (!confirm('Désactiver ?')) return
-  await patchProduit(id, { actif:false } as any)
-  ok('Désactivé')
+    resetProduitForm()
+    fetchProduits()
+  } finally { produitLoading.value = false }
 }
 
-// ══════════════ BOX DU MOIS ══════════════
-type BoxData = { id:string; mois:string; taille:'XS'|'S'|'M'|'L'; theme:string|null; statut:string; items:{id:string;produitId:string;quantite:number}[] }
-
-function nowMois() {
-  const d = new Date()
-  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`
-}
-function fmtMois(m:string) {
-  if (!m) return ''
-  const [y,mo] = m.split('-')
-  return new Date(Number(y), Number(mo)-1).toLocaleDateString('fr-FR', {month:'long',year:'numeric'})
+function startEditProduit(p: any) {
+  editProduit.value = p
+  Object.assign(produitForm, { nom: p.nom, emoji: p.emoji, description: p.description, categorie: p.categorie, stock: p.stock, tailles: p.tailles?.map((t: any) => t.taille) ?? [] })
+  openProduitForm.value = true
 }
 
-const moisList      = ref<string[]>([nowMois()])
-const selectedMois  = ref(nowMois())
-const boxesData     = ref<BoxData[]>([])
-const abonnesMap    = ref<Record<string,number>>({})
-const saving        = reactive<Record<string,boolean>>({ S:false, M:false, L:false })
-const pickerCat     = reactive<Record<string,string|undefined>>({ S:undefined, M:undefined, L:undefined })
-
-// Formulaires des 3 boxes
-const forms = reactive<Record<'XS'|'S'|'M'|'L',{theme:string;items:{produitId:string;quantite:number}[]}>>({
-  XS: { theme:'', items:[] },
-  S: { theme:'', items:[] },
-  M: { theme:'', items:[] },
-  L: { theme:'', items:[] },
-})
-
-const statutGlobal = computed(() => {
-  const ss = boxesData.value.map(b=>b.statut)
-  if (ss.includes('CLOTUREE')) return 'CLOTUREE'
-  if (ss.includes('EXPEDIEE')) return 'EXPEDIEE'
-  if (ss.length === 4 && ss.every(s=>s==='VALIDEE')) return 'VALIDEE'
-  return 'BROUILLON'
-})
-const estVerrouille = computed(() => ['VALIDEE','EXPEDIEE','CLOTUREE'].includes(statutGlobal.value))
-const peutValider   = computed(() => statutGlobal.value === 'BROUILLON' && boxesData.value.length === 4 && boxesData.value.every(b=>b.items.length > 0))
-const peutCloturer  = computed(() => ['BROUILLON','VALIDEE','EXPEDIEE'].includes(statutGlobal.value) && boxesData.value.length > 0)
-
-// Produits disponibles pour une taille + filtre catégorie
-function pickerProduits(taille:'XS'|'S'|'M'|'L') {
-  const filtered = produits.value.filter(p => {
-    if (!p.actif || p.stock <= 0) return false
-    if (!p.tailles.some(t=>t.taille===taille)) return false
-    if (pickerCat[taille]) return p.categorie === pickerCat[taille]
-    return true
-  })
-  // Invendus en tête de liste pour les retrouver facilement
-  return [
-    ...filtered.filter(p => p.estInvendu),
-    ...filtered.filter(p => !p.estInvendu),
-  ]
+function resetProduitForm() {
+  editProduit.value = null
+  openProduitForm.value = false
+  Object.assign(produitForm, { nom: '', emoji: '📦', description: '', categorie: '', stock: 0, tailles: [] })
 }
 
-function getProduit(id:string) { return produits.value.find(p=>p.id===id) }
-
-function addItem(taille:'XS'|'S'|'M'|'L', produitId:string) {
-  if (forms[taille].items.find(i=>i.produitId===produitId)) return
-  forms[taille].items.push({ produitId, quantite:1 })
-}
-function removeItem(taille:'XS'|'S'|'M'|'L', idx:number) {
-  forms[taille].items.splice(idx, 1)
+async function deleteProduit(id: string) {
+  if (!confirm('Supprimer ce produit ?')) return
+  await $fetch(`/api/admin/produits/${id}`, { method: 'DELETE' })
+  fetchProduits()
 }
 
-async function saveBox(taille:'XS'|'S'|'M'|'L') {
-  if (forms[taille].items.length === 0) { nok('Ajoutez au moins un produit'); return }
-  saving[taille] = true
-  try {
-    await $fetch('/api/admin/boxes-mensuelles', {
-      method:'POST', headers:H(),
-      body: { mois:selectedMois.value, taille, theme:forms[taille].theme||undefined, items:forms[taille].items },
-    })
-    ok(`Box ${taille} sauvegardée ✓`)
-    await loadBoxes()
-  } catch(e:any) { nok(e?.data?.statusMessage ?? 'Erreur') }
-  finally { saving[taille] = false }
-}
-
-async function validerMois() {
-  try {
-    const r = await $fetch<any>('/api/admin/boxes-mensuelles/valider', { method:'POST', headers:H(), body:{ mois:selectedMois.value } })
-    ok(r.message)
-    await loadBoxes()
-  } catch(e:any) { nok(e?.data?.statusMessage ?? 'Erreur') }
-}
-
-const showCloture = ref(false)
-const cloturing   = ref(false)
-const clotureErr  = ref('')
-async function cloturerMois() {
-  cloturing.value = true; clotureErr.value = ''
-  try {
-    const r = await $fetch<any>('/api/admin/boxes-mensuelles/cloturer', { method:'POST', headers:H(), body:{ mois:selectedMois.value } })
-    ok(r.message)
-    showCloture.value = false
-    // Recharger les produits : les nouvelles entrées inv_... doivent apparaître dans le picker
-    const pd = await $fetch<any>('/api/admin/produits', { headers:H() })
-    produits.value = pd.data
-    await loadBoxes()
-    await loadInvendus()
-    activeTab.value = 'invendus'
-  } catch(e:any) { clotureErr.value = e?.data?.statusMessage ?? 'Erreur' }
-  finally { cloturing.value = false }
-}
-
-function addNextMonth() {
-  const last = moisList.value[moisList.value.length - 1]
-  const [y,m] = last.split('-').map(Number)
-  const next = m===12 ? `${y+1}-01` : `${y}-${String(m+1).padStart(2,'0')}`
-  if (!moisList.value.includes(next)) moisList.value.push(next)
-  selectedMois.value = next
-}
-
-async function loadBoxes() {
-  try {
-    const r = await $fetch<any>('/api/admin/boxes-mensuelles', { params:{ mois:selectedMois.value }, headers:H() })
-    boxesData.value = r.data.boxes
-    abonnesMap.value = r.data.abonnesMap
-
-    for (const t of ['XS','S','M','L'] as const) {
-      const box = boxesData.value.find(b=>b.taille===t)
-      if (box) {
-        forms[t].theme = box.theme ?? ''
-        forms[t].items = box.items.map(i=>({ produitId:i.produitId, quantite:i.quantite }))
-      } else {
-        forms[t].theme = ''; forms[t].items = []
-      }
-    }
-  } catch { /* silencieux */ }
-}
-
-watch(selectedMois, loadBoxes)
-
-// ══════════════ INVENDUS ══════════════
-type InvData = { invendus:any[]; parMois:Record<string,any[]>; stockTotal:number }
-const invendusData  = ref<InvData|null>(null)
-const invendusBadge = computed(() => invendusData.value?.stockTotal ? String(invendusData.value.stockTotal) : undefined)
-
-async function loadInvendus() {
-  try {
-    const r = await $fetch<any>('/api/admin/invendus', { headers:H() })
-    invendusData.value = r.data
-  } catch { /* silencieux */ }
-}
-
-// ══════════════ COMMANDES ══════════════
-const commandes = ref<any[]>([])
-
-// ══════════════ INIT ══════════════
-// Attendre que l'auth soit prête avant de charger
-watch(() => authUser.value?.id, async (uid) => {
-  if (!uid) return
-  produitsLoading.value = true
-  try {
-    const r = await $fetch<any>('/api/admin/produits', { headers:H() })
-    produits.value = r.data
-  } catch { nok('Erreur chargement produits') }
-  finally { produitsLoading.value = false }
-
-  await Promise.all([loadBoxes(), loadInvendus()])
-
-  try {
-    const r = await $fetch<any>('/api/admin/commandes', { headers:H() })
-    commandes.value = r.data
-  } catch { /* silencieux */ }
-
-  // Récupérer les mois existant en base
-  try {
-    const r = await $fetch<any>('/api/admin/boxes-mensuelles', { headers:H() })
-    const ms = [...new Set(r.data.boxes.map((b:any) => b.mois) as string[])].sort()
-    for (const m of ms) if (!moisList.value.includes(m)) moisList.value.push(m)
-    moisList.value.sort()
-  } catch { /* silencieux */ }
+// ── COMMANDES
+const commandesAdmin = ref<any[]>([])
+watch(() => activeTab.value === 'commandes', async (v) => {
+  if (!v) return
+  const data = await $fetch('/api/admin/commandes')
+  commandesAdmin.value = (data as any).data ?? []
 }, { immediate: true })
+
+// ── INVENDUS
+const invendus = ref<any[]>([])
+watch(() => activeTab.value === 'invendus', async (v) => {
+  if (!v) return
+  const data = await $fetch('/api/admin/invendus')
+  invendus.value = (data as any).data ?? []
+}, { immediate: true })
+
+// ── Helpers
+function formatDate(d: string) {
+  return new Date(d).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' })
+}
+function formatMois(m: string) {
+  if (!m) return '—'
+  const [y, mo] = m.split('-')
+  return new Date(+y, +mo - 1, 1).toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' })
+}
+
+const categoriesAdmin = [
+  { value: 'MASTICATION', icon: '🦌', label: 'Mastication' },
+  { value: 'NUTRITION',   icon: '🍖', label: 'Nutrition' },
+  { value: 'JOUET',       icon: '🎾', label: 'Jouet' },
+  { value: 'SOIN',        icon: '🌿', label: 'Soin' },
+  { value: 'ACCESSOIRE',  icon: '🎀', label: 'Accessoire' },
+]
+const catColors: Record<string,string> = { MASTICATION:'badge-blue', NUTRITION:'badge-green', JOUET:'badge-yellow', SOIN:'badge-rose', ACCESSOIRE:'badge-blue' }
+const catLabels: Record<string,string> = { MASTICATION:'Mastication', NUTRITION:'Nutrition', JOUET:'Jouet', SOIN:'Soin', ACCESSOIRE:'Accessoire' }
+
+const statutBoxColor: Record<string,string> = { BROUILLON:'badge-yellow', VALIDEE:'badge-blue', EXPEDIEE:'badge-green', CLOTUREE:'badge-rose' }
+const statutBoxLabel: Record<string,string> = { BROUILLON:'Brouillon', VALIDEE:'Validée', EXPEDIEE:'Expédiée', CLOTUREE:'Clôturée' }
+const statutColor: Record<string,string> = { EN_ATTENTE:'badge-yellow', CONFIRMEE:'badge-blue', PREPAREE:'badge-blue', EXPEDIEE:'badge-green', LIVREE:'badge-green', ANNULEE:'badge-rose' }
+const statutLabel: Record<string,string> = { EN_ATTENTE:'En attente', CONFIRMEE:'Confirmée', PREPAREE:'Préparée', EXPEDIEE:'Expédiée', LIVREE:'Livrée', ANNULEE:'Annulée' }
 </script>
 
 <style scoped>
+.admin-page { min-height: 100vh; background: #F4F6FA; display: flex; flex-direction: column; }
+
+.admin-header {
+  background: var(--ink);
+  padding: var(--space-3) 0;
+  border-bottom: 2px solid rgba(255,255,255,0.05);
+  position: sticky; top: 0; z-index: 200;
+}
+.admin-header-inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.admin-logo-row { display: flex; align-items: center; gap: var(--space-3); }
+.admin-logo { height: 28px; }
+.admin-badge {
+  background: rgba(255,255,255,0.1); color: white;
+  font-size: 0.75rem; font-weight: 700; padding: 4px 12px;
+  border-radius: var(--radius-pill);
+}
+.admin-user { display: flex; align-items: center; gap: var(--space-3); }
+
 /* Layout */
-.admin-layout { display:flex; min-height:100vh; font-family:var(--font-body); background:#F5F2EC; }
+.admin-layout {
+  display: flex;
+  flex: 1;
+}
 
 /* Sidebar */
-.sidebar { width:210px;flex-shrink:0;background:var(--nuit);color:var(--neige);display:flex;flex-direction:column;padding:1.5rem 1rem;position:sticky;top:0;height:100vh;overflow-y:auto; }
-.sidebar__brand { margin-bottom:1.5rem; }
-.sidebar__logo { font-family:var(--font-display);font-size:1.5rem;font-weight:900;color:var(--bleu-vif); }
-.sidebar__badge { font-size:.63rem;background:rgba(212,136,59,.25);color:var(--bleu-vif);padding:.1rem .5rem;border-radius:40px;display:inline-block;letter-spacing:.1em;text-transform:uppercase;font-weight:600;margin-top:.3rem; }
-.sidebar__nav { display:flex;flex-direction:column;gap:.3rem;flex:1; }
-.sidebar__item { display:flex;align-items:center;gap:.65rem;padding:.65rem .9rem;border-radius:10px;border:none;background:transparent;color:rgba(245,239,224,.5);font-size:.87rem;font-weight:500;cursor:pointer;transition:all .2s;text-align:left;font-family:var(--font-body); }
-.sidebar__item:hover { background:rgba(255,255,255,.07);color:var(--neige); }
-.sidebar__item.active { background:var(--bleu-vif);color:var(--nuit); }
-.sidebar__badge-count { margin-left:auto;background:var(--danger);color:white;font-size:.63rem;font-weight:700;padding:.15rem .45rem;border-radius:40px;min-width:18px;text-align:center; }
-.sidebar__item.active .sidebar__badge-count { background:var(--nuit); }
-.sidebar__footer { border-top:1px solid rgba(255,255,255,.1);padding-top:1rem; }
-.sidebar__user { font-size:.78rem;color:rgba(245,239,224,.45);margin-bottom:.35rem; }
-.sidebar__back { font-size:.78rem;color:var(--bleu-vif); }
+.admin-sidebar {
+  width: 240px;
+  flex-shrink: 0;
+  background: white;
+  border-right: 1px solid #E5E7EB;
+  padding: var(--space-5) var(--space-3);
+  position: sticky;
+  top: 56px;
+  height: calc(100vh - 56px);
+  overflow-y: auto;
+}
+.admin-nav { display: flex; flex-direction: column; gap: 2px; }
+.admin-nav-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: 10px 14px;
+  border-radius: var(--radius-md);
+  font-family: var(--font-body);
+  font-size: 0.9375rem;
+  font-weight: 500;
+  color: var(--ink-soft);
+  cursor: pointer;
+  border: none;
+  background: transparent;
+  text-align: left;
+  transition: all var(--duration-fast);
+  width: 100%;
+}
+.admin-nav-item:hover { background: rgba(4,172,227,0.06); color: var(--blue); }
+.admin-nav-item.active { background: rgba(4,172,227,0.1); color: var(--blue); font-weight: 600; }
+.admin-nav-icon { font-size: 1.125rem; }
+.admin-nav-badge {
+  margin-left: auto;
+  background: var(--blue); color: white;
+  font-size: 0.7rem; font-weight: 700;
+  padding: 2px 8px; border-radius: var(--radius-pill);
+}
 
 /* Main */
-.admin-main { flex:1;overflow-y:auto; }
-.admin-section { padding:2rem 2.5rem; }
+.admin-main { flex: 1; padding: var(--space-6); overflow-x: hidden; }
 
-/* Section head */
-.section-head { display:flex;align-items:center;justify-content:space-between;margin-bottom:1.5rem; }
-.section-head h1 { font-family:var(--font-display);font-size:1.7rem;font-weight:900;color:var(--nuit); }
-.count-badge { background:var(--bleu-vif);color:var(--nuit);padding:.3rem .9rem;border-radius:40px;font-size:.82rem;font-weight:600; }
-.empty-state { text-align:center;padding:3rem;color:var(--muted);font-size:1rem; }
+.admin-section { display: flex; flex-direction: column; gap: var(--space-5); }
+.admin-section-header { display: flex; align-items: center; justify-content: space-between; }
+.admin-section-title { font-family: var(--font-display); font-size: 1.5rem; font-weight: 700; }
+.admin-subtitle { font-family: var(--font-display); font-size: 1.125rem; font-weight: 700; color: var(--ink-soft); }
 
-/* Chips filters */
-.chips-row { display:flex;gap:.5rem;flex-wrap:wrap;align-items:center;margin-bottom:1.2rem; }
-.chip { padding:.32rem .85rem;border-radius:40px;border:1.5px solid var(--brume);background:white;font-size:.8rem;color:var(--muted);cursor:pointer;font-family:var(--font-body);transition:all .15s; }
-.chip.active, .chip:hover { background:var(--nuit);color:var(--neige);border-color:var(--nuit); }
-.check-filter { display:flex;align-items:center;gap:.4rem;font-size:.82rem;color:var(--muted);cursor:pointer;margin-left:.5rem; }
+/* KPIs */
+.kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--space-4); }
+.kpi-card {
+  background: white;
+  border-radius: var(--radius-lg);
+  padding: var(--space-5);
+  border: 1px solid #E5E7EB;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.kpi-icon { font-size: 1.75rem; }
+.kpi-value { font-family: var(--font-display); font-size: 2.5rem; font-weight: 900; color: var(--ink); line-height: 1; }
+.kpi-label { font-size: 0.8125rem; color: var(--ink-muted); font-weight: 500; text-transform: uppercase; letter-spacing: 0.04em; }
+
+/* Quick actions */
+.quick-actions { display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--space-3); }
+.quick-action {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-4) var(--space-5);
+  background: white;
+  border: 1px solid #E5E7EB;
+  border-radius: var(--radius-lg);
+  font-family: var(--font-body);
+  font-size: 0.9375rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--duration-fast);
+}
+.quick-action:hover { border-color: var(--blue); background: rgba(4,172,227,0.04); color: var(--blue); }
+.quick-action span:first-child { font-size: 1.5rem; }
+
+/* Filters */
+.admin-filters { display: flex; gap: var(--space-3); align-items: center; }
+.admin-filter-input { max-width: 200px; }
+
+/* Boxes admin */
+.boxes-admin-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--space-4); }
+.box-admin-card {
+  background: white;
+  border-radius: var(--radius-lg);
+  padding: var(--space-5);
+  border: 1px solid #E5E7EB;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+.box-admin-header { display: flex; align-items: center; justify-content: space-between; }
+.box-admin-taille { font-family: var(--font-display); font-size: 2rem; font-weight: 900; color: var(--blue); }
+.box-admin-mois { font-weight: 600; text-transform: capitalize; }
+.box-admin-theme { font-size: 0.875rem; color: var(--ink-soft); }
+.box-admin-items { display: flex; flex-wrap: wrap; gap: 4px; }
+.box-item-chip {
+  font-size: 0.75rem;
+  background: rgba(4,172,227,0.08);
+  color: var(--blue);
+  padding: 2px 8px;
+  border-radius: var(--radius-pill);
+}
+.box-item-more { font-size: 0.75rem; color: var(--ink-muted); }
+.box-admin-actions { display: flex; gap: var(--space-2); }
+
+/* Admin form */
+.admin-form-panel {
+  background: var(--cream);
+  border: 2px solid var(--border);
+  border-radius: var(--radius-xl);
+  padding: var(--space-6);
+}
+.admin-form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-4); }
+.admin-form-actions { display: flex; gap: var(--space-3); margin-top: var(--space-4); }
+
+.taille-checkboxes { display: flex; gap: var(--space-4); }
+.taille-check-label { display: flex; align-items: center; gap: var(--space-2); cursor: pointer; font-weight: 600; }
+.taille-check-label input { accent-color: var(--blue); width: 16px; height: 16px; }
 
 /* Table */
-.table-wrap { background:white;border-radius:18px;border:1.5px solid var(--brume);overflow:hidden;overflow-x:auto; }
-.dtable { width:100%;border-collapse:collapse;font-size:.87rem; }
-.dtable thead { background:var(--neige); }
-.dtable th { padding:.8rem 1.2rem;text-align:left;font-size:.72rem;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);font-weight:500; }
-.dtable td { padding:.8rem 1.2rem;border-top:1px solid var(--neige);vertical-align:middle; }
-.dtable tbody tr:hover { background:#FDFAF4; }
-.tr-invendu { background:#FFFBF0 !important; }
-.tr-off { opacity:.5; }
-.p-emoji { font-size:1.4rem;vertical-align:middle;margin-right:.5rem; }
-.p-nom { font-weight:500;color:var(--nuit);font-size:.87rem; }
-.p-origine { font-size:.7rem;color:var(--bleu-vif);background:rgba(212,136,59,.12);padding:.1rem .5rem;border-radius:40px;display:inline-block;margin-top:.2rem; }
-.cat-chip { background:var(--brume);padding:.2rem .6rem;border-radius:20px;font-size:.74rem;color:var(--nuit); }
-.size-pill { background:var(--brume);padding:.15rem .5rem;border-radius:4px;font-size:.7rem;font-weight:700;color:var(--nuit);margin-right:.2rem; }
-.stock-input { width:62px;padding:.3rem .45rem;border-radius:8px;border:1.5px solid var(--brume);background:var(--neige);font-size:.85rem;text-align:center;font-family:var(--font-body); }
-.inv-btn { padding:.2rem .65rem;border-radius:20px;border:none;font-size:.75rem;font-weight:600;cursor:pointer;font-family:var(--font-body); }
-.inv-on { background:#EDF4E5;color:#2D6A1F; }
-.inv-off { background:var(--brume);color:var(--muted); }
-.dot-on { color:var(--menthe);font-size:1rem; }
-.dot-off { color:var(--muted);font-size:1rem; }
-.icon-btn { width:30px;height:30px;border-radius:8px;border:1.5px solid var(--brume);background:white;cursor:pointer;font-size:.85rem;transition:background .15s;margin-right:.3rem; }
-.icon-btn:hover { background:var(--neige); }
-.icon-btn-del:hover { background:#FBE9E7; }
-.s-chip { padding:.2rem .7rem;border-radius:20px;font-size:.75rem;font-weight:500; }
-.s-en_attente{background:#FFF8E7;color:#8A6200}.s-confirmee{background:#EDF4E5;color:#2D6A1F}.s-expediee{background:#E5EDF4;color:#1A4A7A}.s-livree{background:#EDF4E5;color:#2D6A1F}.s-annulee{background:#FBE9E7;color:#9B2C2C}
+.admin-table-wrap { overflow-x: auto; }
+.admin-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: white;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  border: 1px solid #E5E7EB;
+}
+.admin-table th {
+  text-align: left;
+  padding: 12px 16px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--ink-muted);
+  background: #F9FAFB;
+  border-bottom: 1px solid #E5E7EB;
+}
+.admin-table td { padding: 14px 16px; border-bottom: 1px solid #F3F4F6; vertical-align: middle; }
+.admin-table tr:last-child td { border-bottom: none; }
+.admin-table tr:hover td { background: #FAFBFD; }
 
-/* Mois info bar */
-.mois-select { padding:.5rem .9rem;border-radius:8px;border:1.5px solid var(--brume);background:white;font-family:var(--font-body);font-size:.88rem; }
-.mois-info-bar { display:flex;align-items:center;gap:1.5rem;flex-wrap:wrap;background:white;border-radius:14px;border:1.5px solid var(--brume);padding:1rem 1.5rem;margin-bottom:1.5rem;font-size:.88rem;color:var(--muted); }
-.mois-info-bar strong { color:var(--nuit); }
-.statut-badge { padding:.28rem .85rem;border-radius:40px;font-size:.78rem;font-weight:600; }
-.sbadge-validee{background:#EDF4E5;color:#2D6A1F}.sbadge-expediee{background:#E5EDF4;color:#1A4A7A}.sbadge-cloturee{background:var(--brume);color:var(--nuit)}
+.produit-cell { display: flex; align-items: center; gap: var(--space-3); }
+.produit-cell-emoji { font-size: 1.75rem; flex-shrink: 0; }
+.produit-desc-trunc {
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.taille-chips { display: flex; gap: 4px; flex-wrap: wrap; }
+.row-actions { display: flex; gap: 4px; }
 
-/* Box editor */
-.box-editor-grid { display:grid;grid-template-columns:repeat(3,1fr);gap:1.2rem; }
-.box-col { background:white;border-radius:18px;border:1.5px solid var(--brume);overflow:hidden;display:flex;flex-direction:column; }
-.box-col__head { display:flex;align-items:center;gap:.7rem;background:var(--nuit);color:var(--neige);padding:.9rem 1.2rem; }
-.box-col__letter { font-family:var(--font-display);font-size:1.8rem;font-weight:900;color:var(--bleu-vif);line-height:1; }
-.box-col__poids { font-size:.75rem;opacity:.7; }
-.box-col__abonnes { font-size:.7rem;background:rgba(212,136,59,.3);color:var(--bleu-vif);padding:.12rem .5rem;border-radius:40px;margin-top:.2rem;display:inline-block; }
-.box-col__body { padding:.8rem 1rem; }
-.field-label { font-size:.75rem;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;display:block;margin-bottom:.4rem; }
+.admin-empty { text-align: center; padding: var(--space-7); color: var(--ink-muted); }
+.link-btn { background: none; border: none; cursor: pointer; color: var(--blue); font-weight: 600; text-decoration: underline; }
+.font-mono { font-family: monospace; }
+.text-rose { color: #E54747; }
 
-/* Items list */
-.box-col__items { padding:.5rem 1rem;flex:1; }
-.box-col__items-title { font-size:.75rem;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;display:flex;align-items:center;justify-content:space-between;margin-bottom:.5rem; }
-.items-count { background:var(--bleu-vif);color:var(--nuit);font-size:.68rem;font-weight:700;padding:.1rem .5rem;border-radius:40px; }
-.items-empty { font-size:.8rem;color:var(--muted);text-align:center;padding:.8rem 0;background:var(--neige);border-radius:8px; }
-.item-row { display:flex;align-items:center;gap:.5rem;padding:.4rem 0;border-bottom:1px solid var(--neige);font-size:.83rem; }
-.item-emoji { font-size:1.2rem;flex-shrink:0; }
-.item-nom { flex:1;font-weight:500;color:var(--nuit); }
-.item-qty { width:46px;padding:.2rem .4rem;border-radius:6px;border:1px solid var(--brume);text-align:center;font-family:var(--font-body);font-size:.8rem; }
-.item-del { width:20px;height:20px;border-radius:50%;border:none;background:#FBE9E7;color:var(--danger);cursor:pointer;font-size:.7rem;flex-shrink:0; }
+.admin-loading { text-align: center; padding: var(--space-7); color: var(--ink-muted); }
 
-/* Picker de produit */
-.box-col__add { border-top:2px dashed var(--bleu-vif);margin:.5rem 0;padding:.8rem 1rem; }
-.add-label { font-size:.78rem;font-weight:700;color:var(--bleu-vif);text-transform:uppercase;letter-spacing:.07em;margin-bottom:.6rem; }
-.add-cat-filter { display:flex;gap:.35rem;flex-wrap:wrap;margin-bottom:.6rem; }
-.cat-chip-btn { padding:.25rem .55rem;border-radius:40px;border:1.5px solid var(--brume);background:white;font-size:.8rem;cursor:pointer;font-family:var(--font-body);transition:all .15s; }
-.cat-chip-btn.active { background:var(--nuit);color:var(--neige);border-color:var(--nuit); }
-.add-produits-list { max-height:200px;overflow-y:auto;display:flex;flex-direction:column;gap:.3rem; }
-.picker-empty { font-size:.8rem;color:var(--muted);text-align:center;padding:.5rem; }
-.picker-row { display:flex;align-items:center;gap:.55rem;padding:.5rem .7rem;border-radius:8px;border:1.5px solid var(--brume);background:white;cursor:pointer;font-family:var(--font-body);font-size:.83rem;transition:all .15s;text-align:left;width:100%; }
-.picker-row:hover:not(:disabled) { border-color:var(--bleu-vif);background:#FFF4E6; }
-.picker-row--added { background:#EDF4E5;border-color:var(--menthe);cursor:default; }
-.picker-row--invendu { border-color:#D4883B;background:#FFFBF0; }
-.picker-row--invendu:hover:not(:disabled) { background:#FFF4E6;border-color:var(--bleu-vif); }
-.picker-row__inv-badge { font-size:.68rem;background:rgba(212,136,59,.2);color:var(--bleu-vif);padding:.1rem .4rem;border-radius:40px;flex-shrink:0; }
-.picker-row:disabled { opacity:.6;cursor:default; }
-.picker-row__nom { flex:1;font-weight:500;color:var(--nuit); }
-.picker-row__stock { font-size:.72rem;color:var(--muted); }
-.picker-row__check { color:var(--menthe);font-weight:700; }
-.picker-row__plus { color:var(--bleu-vif);font-weight:700;font-size:1.1rem; }
+@media (max-width: 1024px) {
+  .kpi-grid, .quick-actions { grid-template-columns: repeat(2, 1fr); }
+  .boxes-admin-grid { grid-template-columns: repeat(2, 1fr); }
+}
 
-.box-col__footer { padding:.8rem 1rem;border-top:1px solid var(--neige); }
-
-/* Invendus */
-.inv-groupe { margin-bottom:2rem; }
-.inv-groupe__title { font-family:var(--font-display);font-size:1.1rem;font-weight:700;margin-bottom:1rem;color:var(--nuit); }
-.inv-grid { display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:1rem; }
-.inv-card { background:white;border-radius:14px;border:1.5px solid var(--brume);padding:.9rem 1rem;display:flex;align-items:center;gap:.8rem; }
-.inv-card__emoji { font-size:1.8rem;flex-shrink:0; }
-.inv-card__nom { font-weight:600;font-size:.87rem;color:var(--nuit);margin-bottom:.25rem; }
-.inv-card__info { flex:1; }
-.inv-card__right { display:flex;flex-direction:column;align-items:center;gap:.2rem; }
-.inv-card__label { font-size:.68rem;color:var(--muted); }
-
-/* Modal */
-.modal-bg { position:fixed;inset:0;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;z-index:1000;padding:1rem; }
-.modal-box { width:100%;max-width:520px;padding:2rem;max-height:90vh;overflow-y:auto;background:white;border-radius:24px; }
-.modal-head { display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem; }
-.modal-head h2 { font-family:var(--font-display);font-size:1.3rem;font-weight:700; }
-.modal-head button { width:30px;height:30px;border-radius:50%;border:1.5px solid var(--brume);background:white;cursor:pointer; }
-.modal-foot { display:flex;gap:1rem;justify-content:flex-end;margin-top:1.5rem; }
-.form-row { display:grid;grid-template-columns:1fr 1fr;gap:1rem; }
-.modal-enter-active,.modal-leave-active{transition:opacity .2s}
-.modal-enter-from,.modal-leave-to{opacity:0}
-
-@media(max-width:1000px){.box-editor-grid{grid-template-columns:1fr}.sidebar{display:none}}
+@media (max-width: 768px) {
+  .admin-sidebar { display: none; }
+  .kpi-grid, .quick-actions { grid-template-columns: 1fr 1fr; }
+  .boxes-admin-grid { grid-template-columns: 1fr; }
+  .admin-form-grid { grid-template-columns: 1fr; }
+  .admin-form-grid [style*="grid-column"] { grid-column: 1 / -1; }
+}
 </style>

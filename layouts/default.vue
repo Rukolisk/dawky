@@ -1,15 +1,21 @@
-<!-- layouts/default.vue -->
 <template>
-  <div class="layout">
-    <AppNav />
-    <main class="layout-main">
+  <div class="layout-default">
+    <TheNav />
+    <main class="main-content">
       <slot />
     </main>
-    <AppFooter />
+    <TheFooter />
   </div>
 </template>
 
 <style scoped>
-.layout { display: flex; flex-direction: column; min-height: 100vh; }
-.layout-main { flex: 1; padding-top: 72px; }
+.layout-default {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+.main-content {
+  flex: 1;
+}
 </style>

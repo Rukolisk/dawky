@@ -1,583 +1,770 @@
-<!-- pages/index.vue -->
 <template>
   <div class="home">
 
-    <!-- ═══════════════════════════════════════
-         HERO
-    ═══════════════════════════════════════ -->
+    <!-- ═══ HERO ═══════════════════════════════════════ -->
     <section class="hero">
-      <!-- Arrière-plan dégradé -->
-      <div class="hero__bg" />
+      <!-- Fond motif -->
+      <div class="hero-pattern">
+        <img :src="images.fond_motif_bleu" alt="" class="pattern-img" />
+      </div>
 
-      <div class="hero__container container">
-
-        <!-- Colonne gauche : texte -->
-        <div class="hero__left">
-
-          <!-- Eyebrow pill -->
-          <div class="hero__pill fade-in">
-            <img src="/images/dawky-picto.png" alt="" class="hero__pill-picto" />
-            La box pensée pour les yeux de votre chien
+      <div class="container hero-inner">
+        <div class="hero-text animate-fade-in-up">
+          <div class="hero-badge">
+            <span class="badge badge-blue">🐾 Box premium pour chiens</span>
           </div>
-
-          <!-- Titre -->
-          <h1 class="hero__title fade-in delay-1">
-            La box qui<br />parle à<br />
-            <span class="hero__title-accent">votre chien.</span>
+          <h1 class="display-xl hero-title">
+            La box qui fait<br />
+            <em class="text-blue">vraiment</em> la queue<br />
+            frétiller 🐕
           </h1>
-
-          <!-- Sous-titre -->
-          <p class="hero__desc fade-in delay-2">
-            Bleu et jaune — les deux couleurs que les chiens voient vraiment.
-            Contenu adapté à chaque gabarit : XS, S, M, L.
+          <p class="hero-desc text-xl text-soft">
+            Box Surprise mensuelle ou À la Carte — adaptée à la taille et aux besoins de votre chien. 5 produits soigneusement sélectionnés dès <strong class="text-ink">27,90&nbsp;€/mois</strong>.
           </p>
 
-          <!-- CTAs -->
-          <div class="hero__ctas fade-in delay-3">
-            <NuxtLink to="/abonnement" class="btn btn-yellow btn-xl">
-              Commencer l'aventure
+          <div class="hero-ctas">
+            <NuxtLink to="/quiz" class="btn btn-primary btn-lg">
+              🐾 Faire le quiz gratuit
             </NuxtLink>
-            <NuxtLink to="/boxes" class="btn btn-outline btn-xl">
-              Voir les boxes
+            <NuxtLink to="/offres" class="btn btn-outline btn-lg">
+              Voir les offres
             </NuxtLink>
           </div>
 
           <!-- Trust badges -->
-          <div class="hero__trust fade-in delay-4">
-            <div v-for="b in trust" :key="b" class="hero__trust-item">{{ b }}</div>
+          <div class="hero-trust">
+            <span class="trust-item">✅ Sans engagement</span>
+            <span class="trust-item">🚚 Livraison offerte</span>
+            <span class="trust-item">💛 Adapté à votre chien</span>
           </div>
         </div>
 
-        <!-- Colonne droite : visuel -->
-        <div class="hero__right" aria-hidden="true">
-
-          <!-- Grande carte box -->
-          <div class="hero__box-card">
-            <div class="hero__box-top">
-              <img src="/images/dawky-picto.png" alt="" class="hero__box-logo" />
-              <span class="hero__box-mois">Box du mois 🐾</span>
+        <div class="hero-visual animate-fade-in-up delay-200">
+          <div class="hero-mascot-wrap">
+            <img :src="images.mascotte_3" alt="Mascotte Dawky" class="hero-mascot animate-float" />
+            <!-- Produits flottants -->
+            <div class="hero-floating hero-floating-1 animate-float-slow delay-100">
+              <img :src="images.balle" alt="" />
             </div>
-            <div class="hero__box-sizes">
-              <span class="hero__sz hero__sz--xs">XS</span>
-              <span class="hero__sz hero__sz--s">S</span>
-              <span class="hero__sz hero__sz--m">M</span>
-              <span class="hero__sz hero__sz--l">L</span>
+            <div class="hero-floating hero-floating-2 animate-float delay-300">
+              <img :src="images.ble" alt="" />
             </div>
-            <div class="hero__box-tag">Un prix · Quatre gabarits</div>
+            <div class="hero-floating hero-floating-3 animate-float-slow delay-500">
+              <img :src="images.paillette" alt="" />
+            </div>
           </div>
-
-          <!-- Badges flottants -->
-          <div class="hero__badge-float hero__badge-float--1">🎁 Surprise mensuelle</div>
-          <div class="hero__badge-float hero__badge-float--2">🌱 Zéro plastique</div>
-          <div class="hero__badge-float hero__badge-float--3">♻️ Invendus recyclés</div>
         </div>
       </div>
 
-      <!-- Vague de transition -->
-      <svg class="hero__wave" viewBox="0 0 1440 60" preserveAspectRatio="none">
-        <path d="M0,30 C360,60 720,0 1080,30 C1260,45 1380,15 1440,30 L1440,60 L0,60 Z"
-              fill="var(--nuit)" />
-      </svg>
-    </section>
-
-    <!-- ═══════════════════════════════════════
-         BAND — Valeurs
-    ═══════════════════════════════════════ -->
-    <section class="values-band">
-      <div class="container values-band__inner">
-        <div v-for="v in values" :key="v.label" class="values-band__item">
-          <span class="values-band__icon">{{ v.icon }}</span>
-          <div>
-            <strong>{{ v.label }}</strong>
-            <span>{{ v.sub }}</span>
-          </div>
-        </div>
+      <!-- Courbe bas -->
+      <div class="hero-curve">
+        <svg viewBox="0 0 1440 80" fill="none" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none">
+          <path d="M0,0 C360,80 1080,80 1440,0 L1440,80 L0,80 Z" fill="#FFFBF4"/>
+        </svg>
       </div>
     </section>
 
-    <!-- ═══════════════════════════════════════
-         SECTION — Pourquoi Dawky
-    ═══════════════════════════════════════ -->
-    <section class="why section-pad">
+    <!-- ═══ OFFRES ══════════════════════════════════════ -->
+    <section class="section offers-section">
       <div class="container">
-        <div class="why__inner">
-          <!-- Visuel gauche -->
-          <div class="why__visual">
-            <div class="why__logo-wrap">
-              <img src="/images/dawky-logo.png" alt="DAWKY" class="why__logo" />
-              <p class="why__logo-sub">La box aux couleurs du chien</p>
-            </div>
-            <div class="why__colors">
-              <div class="why__color why__color--bleu">
-                <span>Bleu</span>
-                <small>Vue conique S (~450nm)</small>
+        <div class="section-header text-center animate-fade-in-up">
+          <span class="badge badge-yellow mb-3">Nos formules</span>
+          <h2 class="display-md">Deux façons d'aimer son chien</h2>
+          <p class="text-lg text-soft mt-2">Une box pour chaque chien, chaque envie.</p>
+        </div>
+
+        <div class="offers-grid">
+          <!-- Box Surprise -->
+          <div class="offer-card animate-fade-in-up delay-100">
+            <div class="offer-card-inner">
+              <div class="offer-icon">
+                <img :src="images.picto_truffe_bleu" alt="" />
               </div>
-              <div class="why__color why__color--jaune">
-                <span>Jaune</span>
-                <small>Vue conique M (~560nm)</small>
+              <div class="offer-badge-top">
+                <span class="badge badge-blue">⭐ La plus populaire</span>
               </div>
-            </div>
-          </div>
-
-          <!-- Texte droite -->
-          <div class="why__text">
-            <p class="section-tag">Notre philosophie</p>
-            <h2 class="section-title">
-              Conçu pour<br />
-              <em>leurs yeux.</em>
-            </h2>
-            <p class="section-desc" style="max-width:none">
-              Les chiens sont dichromates — ils ne voient que le bleu et le jaune.
-              Nos jouets, nos packagings, nos couleurs de marque : tout est pensé
-              pour stimuler leurs sens, pas les vôtres.
-            </p>
-            <div class="why__points">
-              <div v-for="p in points" :key="p.title" class="why__point">
-                <span class="why__point-icon">{{ p.icon }}</span>
-                <div>
-                  <strong>{{ p.title }}</strong>
-                  <p>{{ p.desc }}</p>
-                </div>
+              <h3 class="offer-title">Box Surprise</h3>
+              <p class="offer-desc">
+                Chaque mois, nos experts sélectionnent 5 produits adaptés à la taille de votre chien. Jouets, friandises, soins… la surprise garantie !
+              </p>
+              <div class="offer-price">
+                <span class="offer-price-amount">27,90&nbsp;€</span>
+                <span class="offer-price-period">/mois</span>
               </div>
-            </div>
-            <NuxtLink to="/concept" class="btn btn-outline" style="margin-top:1.5rem">
-              Notre concept →
-            </NuxtLink>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- ═══════════════════════════════════════
-         SECTION — Comment ça marche
-    ═══════════════════════════════════════ -->
-    <section class="hiw section-pad" style="background:var(--nuage)">
-      <div class="container">
-        <div style="text-align:center;margin-bottom:3.5rem">
-          <p class="section-tag">Comment ça marche</p>
-          <h2 class="section-title">Simple comme <em>bonjour</em> 🐾</h2>
-        </div>
-
-        <div class="hiw__grid">
-          <div v-for="(step, i) in steps" :key="step.num" class="hiw__step">
-            <!-- Connecteur entre étapes -->
-            <div v-if="i < steps.length - 1" class="hiw__connector" />
-
-            <div class="hiw__circle" :style="{ background: step.color }">
-              {{ step.emoji }}
-            </div>
-            <div class="hiw__num">Étape {{ step.num }}</div>
-            <h3>{{ step.title }}</h3>
-            <p>{{ step.desc }}</p>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- ═══════════════════════════════════════
-         SECTION — Les gabarits
-    ═══════════════════════════════════════ -->
-    <section class="tailles section-pad">
-      <div class="container">
-        <div style="text-align:center;margin-bottom:3.5rem">
-          <p class="section-tag">Nos 4 gabarits</p>
-          <h2 class="section-title">
-            Du Yorkshire<br />au Saint-Bernard — <em>même prix.</em>
-          </h2>
-          <p class="section-desc" style="margin:0 auto">
-            Un seul tarif pour tous. Le contenu s'adapte à la taille de votre chien,
-            pas l'inverse.
-          </p>
-        </div>
-
-        <div class="tailles__grid">
-          <div v-for="t in tailles" :key="t.code" class="taille-card">
-            <div class="taille-card__head" :style="{ background: t.bg, borderColor: t.color }">
-              <span class="taille-card__letter" :style="{ color: t.color }">{{ t.code }}</span>
-              <span class="taille-card__poids">{{ t.poids }}</span>
-            </div>
-            <div class="taille-card__body">
-              <p class="taille-card__race">{{ t.exemples }}</p>
-              <ul class="taille-card__items">
-                <li v-for="item in t.contenu" :key="item">{{ item }}</li>
+              <ul class="offer-features">
+                <li v-for="item in surpriseFeatures" :key="item">
+                  <span class="offer-check">✓</span> {{ item }}
+                </li>
               </ul>
+              <div class="offer-sizes">
+                <span v-for="s in ['XS','S','M','L']" :key="s" class="size-chip">{{ s }}</span>
+              </div>
+              <NuxtLink to="/quiz" class="btn btn-primary w-full">
+                Commencer le quiz 🐾
+              </NuxtLink>
             </div>
-            <div class="taille-card__footer">= même valeur ✓</div>
+          </div>
+
+          <!-- Box À la Carte -->
+          <div class="offer-card offer-card-yellow animate-fade-in-up delay-200">
+            <div class="offer-card-inner">
+              <div class="offer-icon">
+                <img :src="images.picto_truffe_jaune" alt="" />
+              </div>
+              <h3 class="offer-title">Box À la Carte</h3>
+              <p class="offer-desc">
+                Vous choisissez vos 5 produits parmi notre sélection. Idéale pour les chiens allergiques ou les maîtres qui savent ce qu'ils veulent !
+              </p>
+              <div class="offer-price">
+                <span class="offer-price-amount">24,90&nbsp;€</span>
+                <span class="offer-price-period">par box</span>
+              </div>
+              <ul class="offer-features">
+                <li v-for="item in carteFeatures" :key="item">
+                  <span class="offer-check">✓</span> {{ item }}
+                </li>
+              </ul>
+              <div class="offer-sizes">
+                <span v-for="s in ['XS','S','M','L']" :key="s" class="size-chip size-chip-yellow">{{ s }}</span>
+              </div>
+              <NuxtLink to="/offres" class="btn btn-outline w-full">
+                Composer ma box
+              </NuxtLink>
+            </div>
           </div>
         </div>
       </div>
     </section>
 
-    <!-- ═══════════════════════════════════════
-         CTA BAND
-    ═══════════════════════════════════════ -->
-    <section class="cta-band">
-      <div class="container cta-band__inner">
-        <div class="cta-band__text">
-          <h2>Prêt à gâter<br /><em>votre chien ?</em></h2>
-          <p>Livraison offerte · Résiliable à tout moment</p>
+    <!-- ═══ COMMENT ÇA MARCHE ══════════════════════════ -->
+    <section class="section how-section">
+      <div class="how-bg">
+        <img :src="images.fond_motif_jaune" alt="" class="how-pattern" />
+      </div>
+      <div class="container">
+        <div class="section-header text-center">
+          <span class="badge badge-blue mb-3">Simple comme bonjour</span>
+          <h2 class="display-md">Comment ça marche ?</h2>
         </div>
-        <div class="cta-band__actions">
-          <NuxtLink to="/abonnement" class="btn btn-yellow btn-xl">
-            Commencer l'aventure
-          </NuxtLink>
-          <NuxtLink to="/boxes" class="btn btn-outline-yellow btn-xl">
-            Voir les formules
+
+        <div class="steps-grid">
+          <div v-for="(step, i) in steps" :key="i" class="step-card animate-fade-in-up" :class="`delay-${(i+1)*100}`">
+            <div class="step-number">{{ String(i + 1).padStart(2, '0') }}</div>
+            <div class="step-emoji">{{ step.emoji }}</div>
+            <h3 class="step-title">{{ step.title }}</h3>
+            <p class="step-desc text-soft">{{ step.desc }}</p>
+          </div>
+        </div>
+
+        <div class="how-cta text-center">
+          <NuxtLink to="/quiz" class="btn btn-primary btn-lg">
+            Je commence maintenant
           </NuxtLink>
         </div>
       </div>
     </section>
 
-    <!-- ═══════════════════════════════════════
-         NEWSLETTER
-    ═══════════════════════════════════════ -->
-    <NewsletterBand />
-    <KodaToast />
+    <!-- ═══ PRODUITS APERÇU ════════════════════════════ -->
+    <section class="section products-section">
+      <div class="container">
+        <div class="section-header text-center">
+          <span class="badge badge-rose mb-3">Dans vos box</span>
+          <h2 class="display-md">Des produits pensés pour eux</h2>
+          <p class="text-lg text-soft mt-2">Naturels, sûrs, adaptés à chaque taille.</p>
+        </div>
+
+        <div class="categories-grid">
+          <div v-for="cat in categories" :key="cat.label" class="category-card animate-fade-in-up">
+            <div class="category-emoji">{{ cat.emoji }}</div>
+            <img :src="cat.img" alt="" class="category-img" />
+            <h4 class="category-label">{{ cat.label }}</h4>
+            <p class="category-desc text-sm text-soft">{{ cat.desc }}</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══ MASCOTTES / AMBIANCE ═══════════════════════ -->
+    <section class="section mascots-section">
+      <div class="container mascots-inner">
+        <div class="mascots-text animate-fade-in-up">
+          <span class="badge badge-green mb-3">Notre promesse</span>
+          <h2 class="display-md">Pour chaque chien,<br/>une box qui lui ressemble</h2>
+          <p class="text-lg text-soft mt-3 mb-5">
+            Taille XS, S, M ou L — chaque box est composée selon le gabarit de votre compagnon. Pas de compromis : les friandises, les jouets et les soins sont toujours parfaitement adaptés.
+          </p>
+          <div class="mascots-sizes">
+            <div v-for="s in sizes" :key="s.label" class="size-card">
+              <span class="size-label">{{ s.label }}</span>
+              <span class="size-weight text-sm text-muted">{{ s.poids }}</span>
+            </div>
+          </div>
+        </div>
+        <div class="mascots-images">
+          <img :src="images.mascotte_1" alt="" class="mascot-img m1 animate-float" />
+          <img :src="images.mascotte2" alt="" class="mascot-img m2 animate-float-slow delay-200" />
+          <img :src="images.mascotte_4" alt="" class="mascot-img m3 animate-float delay-400" />
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══ TÉMOIGNAGES ════════════════════════════════ -->
+    <section class="section testimonials-section">
+      <div class="container">
+        <div class="section-header text-center">
+          <span class="badge badge-blue mb-3">Ils nous font confiance</span>
+          <h2 class="display-md">La communauté Dawky 🐾</h2>
+        </div>
+
+        <div class="testimonials-grid">
+          <div v-for="t in testimonials" :key="t.name" class="testimonial-card animate-fade-in-up">
+            <div class="testimonial-stars">⭐⭐⭐⭐⭐</div>
+            <p class="testimonial-text">"{{ t.text }}"</p>
+            <div class="testimonial-author">
+              <div class="testimonial-avatar">{{ t.name[0] }}</div>
+              <div>
+                <p class="font-semibold">{{ t.name }}</p>
+                <p class="text-sm text-muted">{{ t.dog }} • {{ t.size }}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══ CTA FINAL ═══════════════════════════════════ -->
+    <section class="cta-section">
+      <div class="container">
+        <div class="cta-card">
+          <div class="cta-pattern">
+            <img :src="images.fond_motif_bleu" alt="" />
+          </div>
+          <div class="cta-content text-center">
+            <img :src="images.sachet_patoune" alt="" class="cta-sachet animate-float" />
+            <h2 class="display-md text-white">Prêt à faire plaisir<br/>à votre chien ?</h2>
+            <p class="text-lg cta-sub">Faites le quiz en 2 minutes — c'est gratuit et sans engagement.</p>
+            <div class="cta-buttons">
+              <NuxtLink to="/quiz" class="btn btn-yellow btn-lg">
+                🐾 Faire le quiz maintenant
+              </NuxtLink>
+              <NuxtLink to="/offres" class="btn btn-white btn-lg">
+                Voir les offres
+              </NuxtLink>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
   </div>
 </template>
 
 <script setup lang="ts">
+import { dawkyImages } from '~/composables/useDawkyImages'
+const images = dawkyImages
+
 useSeoMeta({
-  title: 'DAWKY — La Box Premium pour Chiens',
-  description: 'Dawky : la box pour chiens aux couleurs que les chiens voient vraiment. Bleu & jaune, tailles XS/S/M/L, un seul prix.',
+  title: 'Dawky — La box premium pour chiens',
+  description: 'Box Surprise mensuelle ou À la Carte, adaptée à la taille de votre chien. 5 produits soignés dès 27,90€.',
 })
 
-const trust = [
-  '📏 4 tailles XS → L',
-  '🌱 Zéro plastique',
-  '🔄 Résiliable à tout moment',
-  '🚚 Livraison offerte',
+const surpriseFeatures = [
+  '5 produits sélectionnés par nos experts',
+  'Adapté à la taille de votre chien',
+  'Livraison le 1er du mois',
+  'Sans engagement (résiliation en 1 clic)',
 ]
 
-const values = [
-  { icon: '🎨', label: 'Bleu & Jaune', sub: 'Les couleurs du chien' },
-  { icon: '📏', label: 'XS, S, M, L',  sub: 'Du Chihuahua au Saint-Bernard' },
-  { icon: '♻️', label: 'Invendus recyclés', sub: 'Rien ne se perd chez Dawky' },
-  { icon: '🔄', label: 'Résiliable',    sub: 'Sans engagement minimal' },
-]
-
-const points = [
-  { icon: '🔵', title: 'Jouets bleus & jaunes',    desc: 'Nos jouets sont conçus dans les teintes que votre chien perçoit vraiment.' },
-  { icon: '📦', title: 'Packaging stimulant',       desc: 'Le carton, les étiquettes, les couleurs — tout est pensé pour exciter votre chien.' },
-  { icon: '🧪', title: 'Sélection vétérinaire',     desc: 'Chaque produit est validé pour la sécurité et l\'enrichissement sensoriel.' },
+const carteFeatures = [
+  '5 produits au choix dans notre catalogue',
+  'Idéal en cas d\'allergies',
+  'Commande ponctuelle',
+  'Prix réduits sur les invendus',
 ]
 
 const steps = [
-  { num: 1, emoji: '📏', color: 'linear-gradient(135deg,#F6C90E,#D4A017)', title: 'Choisissez votre gabarit', desc: 'XS ≤ 4 kg · S ≤ 10 kg · M ≤ 25 kg · L > 25 kg. La taille détermine le contenu.' },
-  { num: 2, emoji: '🎁', color: 'linear-gradient(135deg,#4299E1,#2B6CB0)', title: 'Sélectionnez votre box',   desc: 'Box Surprise mensuelle ou Box À la Carte avec les invendus. Même prix pour tous les gabarits.' },
-  { num: 3, emoji: '🚚', color: 'linear-gradient(135deg,#68B2A0,#4A8A78)', title: 'Recevez et profitez',      desc: 'Livraison offerte dans un packaging éco. Votre chien découvre, joue et mâche !' },
+  { emoji: '🐾', title: 'Faites le quiz', desc: 'Parlez-nous de votre chien : race, poids, goûts… en 2 minutes.' },
+  { emoji: '📦', title: 'On prépare votre box', desc: 'Nos experts composent une sélection adaptée à votre compagnon.' },
+  { emoji: '🚚', title: 'Livraison à domicile', desc: 'Votre box arrive le 1er du mois, directement chez vous.' },
+  { emoji: '🎉', title: 'Profitez !', desc: 'Votre chien découvre ses surprises — et vous aussi !' },
 ]
 
-const tailles = [
-  {
-    code: 'XS', poids: '≤ 4 kg', color: '#9B8EC4', bg: '#F0ECF8',
-    exemples: 'Yorkshire, Chihuahua, Spitz nain…',
-    contenu: ['3 micro-jouets adaptés', '2 sachets friandises mini', '1 micro-mastication', '1 soin coussinets', '1 accessoire mignon'],
-  },
-  {
-    code: 'S', poids: '4 – 10 kg', color: '#D4A017', bg: '#FEFCE8',
-    exemples: 'Teckel, Bichon, Jack Russell…',
-    contenu: ['2 petits jouets résistants', '2 sachets friandises S', '1 bois mastication S', '1 soin coussinets', '1 accessoire'],
-  },
-  {
-    code: 'M', poids: '10 – 25 kg', color: '#68B2A0', bg: '#E0F4EF',
-    exemples: 'Beagle, Cocker, Border Collie…',
-    contenu: ['1 jouet robuste M', '2 sachets friandises M', '1 mastication M', '1 soin ou lotion', '1 accessoire'],
-  },
-  {
-    code: 'L', poids: '> 25 kg', color: '#2B6CB0', bg: '#EBF4FF',
-    exemples: 'Labrador, Husky, Malinois…',
-    contenu: ['1 grand jouet XXL', '1 grand sachet friandises', '1 mastication XXL', '1 kit soin complet', '1 accessoire premium'],
-  },
+const categories = [
+  { emoji: '🦌', label: 'Mastication', desc: 'Bois de cerf, sabots naturels…', img: images.mastication },
+  { emoji: '🍖', label: 'Nutrition', desc: 'Friandises saines, sans céréales', img: images.ble },
+  { emoji: '🎾', label: 'Jouets', desc: 'Résistants, stimulants, sécurisés', img: images.balle },
+  { emoji: '🌿', label: 'Soins', desc: 'Coussinets, pelage, hygiène', img: images.collier },
+  { emoji: '🎀', label: 'Accessoires', desc: 'Bandanas, médailles, surprises', img: images.gamelle },
+]
+
+const sizes = [
+  { label: 'XS', poids: '< 5 kg' },
+  { label: 'S', poids: '5–10 kg' },
+  { label: 'M', poids: '10–25 kg' },
+  { label: 'L', poids: '> 25 kg' },
+]
+
+const testimonials = [
+  { name: 'Sophie M.', dog: 'Luna', size: 'Border Collie • M', text: 'Luna attend sa box avec impatience chaque mois. Les produits sont vraiment de qualité et bien adaptés à sa taille !' },
+  { name: 'Thomas L.', dog: 'Rocky', size: 'Chihuahua • XS', text: 'J\'adore la Box À la Carte pour Rocky qui est allergique au poulet. Enfin une box qui s\'adapte à ses besoins !' },
+  { name: 'Marie D.', dog: 'Max', size: 'Labrador • L', text: 'Les jouets résistent enfin au niveau de Max 😂 Et les friandises sont parties en 5 secondes. Dawky c\'est top !' },
 ]
 </script>
 
 <style scoped>
-/* ── Hero ────────────────────────────────────────────────── */
+/* ── HERO ────────────────────────────────── */
 .hero {
-  position: relative; overflow: hidden;
-  min-height: 100vh; display: flex; flex-direction: column;
-  background: linear-gradient(155deg, #EBF4FF 0%, #F7F9FC 40%, #FEFCE8 80%, #FFF8C0 100%);
-}
-.hero__bg {
-  position: absolute; inset: 0; pointer-events: none;
-  background:
-    radial-gradient(ellipse 60% 50% at 70% 30%, rgba(49,130,206,.10) 0%, transparent 70%),
-    radial-gradient(ellipse 50% 40% at 20% 80%, rgba(246,201,14,.12) 0%, transparent 70%);
+  min-height: 90vh;
+  background: linear-gradient(135deg, #e8f9ff 0%, #f0fdf4 50%, #fffbf4 100%);
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }
 
-.hero__container {
-  position: relative; z-index: 2;
-  display: grid; grid-template-columns: 1fr 1fr;
-  align-items: center; gap: 5rem;
-  padding-top: 9rem; padding-bottom: 6rem; flex: 1;
+.hero-pattern {
+  position: absolute;
+  inset: 0;
+  opacity: 0.06;
+  pointer-events: none;
+}
+.hero-pattern .pattern-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
-/* Eyebrow pill */
-.hero__pill {
-  display: inline-flex; align-items: center; gap: .6rem;
-  background: white; border: 1.5px solid var(--brume);
-  border-radius: var(--r-full); padding: .5rem 1.1rem;
-  font-size: .82rem; font-weight: 600; color: var(--ardoise);
-  margin-bottom: 1.6rem; box-shadow: var(--shadow-sm);
+.hero-inner {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-8);
+  align-items: center;
+  flex: 1;
+  padding-top: var(--space-8);
+  padding-bottom: var(--space-10);
 }
-.hero__pill-picto { height: 22px; width: auto; }
 
-/* Titre */
-.hero__title {
+.hero-badge { margin-bottom: var(--space-4); }
+
+.hero-title {
+  margin-bottom: var(--space-5);
+  em { font-style: italic; }
+}
+
+.hero-desc {
+  margin-bottom: var(--space-6);
+  max-width: 480px;
+}
+
+.hero-ctas {
+  display: flex;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+  margin-bottom: var(--space-5);
+}
+
+.hero-trust {
+  display: flex;
+  gap: var(--space-4);
+  flex-wrap: wrap;
+}
+
+.trust-item {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--ink-soft);
+}
+
+.hero-visual { position: relative; display: flex; justify-content: center; }
+
+.hero-mascot-wrap {
+  position: relative;
+  width: 100%;
+  max-width: 420px;
+}
+
+.hero-mascot {
+  width: 100%;
+  max-width: 380px;
+  margin: 0 auto;
+  filter: drop-shadow(0 20px 60px rgba(4,172,227,0.2));
+}
+
+.hero-floating {
+  position: absolute;
+  width: 80px;
+  background: white;
+  border-radius: var(--radius-lg);
+  padding: 10px;
+  box-shadow: var(--shadow-md);
+}
+.hero-floating img { width: 100%; border-radius: 8px; }
+.hero-floating-1 { top: 10%; left: -5%; }
+.hero-floating-2 { top: 50%; right: -5%; }
+.hero-floating-3 { bottom: 15%; left: 10%; }
+
+.hero-curve {
+  line-height: 0;
+  margin-top: -1px;
+}
+.hero-curve svg { width: 100%; display: block; }
+
+/* ── OFFERS ──────────────────────────────── */
+.offers-section { background: var(--cream); }
+
+.section-header { margin-bottom: var(--space-8); }
+.section-header .mb-3 { margin-bottom: var(--space-3); }
+
+.offers-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-5);
+}
+
+.offer-card {
+  background: white;
+  border-radius: var(--radius-xl);
+  border: 2px solid var(--border);
+  overflow: hidden;
+  transition: transform var(--duration-base) var(--ease-out), box-shadow var(--duration-base);
+}
+
+.offer-card:hover { transform: translateY(-6px); box-shadow: var(--shadow-lg); }
+
+.offer-card-yellow { background: var(--yellow-pale); border-color: rgba(255,187,51,0.25); }
+
+.offer-card-inner { padding: var(--space-7); }
+
+.offer-icon { width: 64px; height: 64px; margin-bottom: var(--space-4); }
+.offer-icon img { width: 100%; }
+
+.offer-badge-top { margin-bottom: var(--space-3); }
+
+.offer-title {
   font-family: var(--font-display);
-  font-size: clamp(2.8rem, 5.5vw, 5rem);
-  font-weight: 900; color: var(--nuit);
-  line-height: 1.0; margin-bottom: 1.4rem;
-}
-.hero__title-accent { color: var(--bleu-vif); font-style: italic; }
-
-.hero__desc {
-  font-size: 1.05rem; color: var(--muted);
-  line-height: 1.75; max-width: 460px; margin-bottom: 2.5rem;
+  font-size: 1.75rem;
+  font-weight: 700;
+  margin-bottom: var(--space-3);
 }
 
-.hero__ctas {
-  display: flex; gap: 1rem; flex-wrap: wrap; margin-bottom: 2.5rem;
+.offer-desc {
+  color: var(--ink-soft);
+  margin-bottom: var(--space-5);
+  line-height: 1.6;
 }
 
-/* Trust */
-.hero__trust {
-  display: flex; flex-wrap: wrap; gap: .6rem;
-  padding-top: 2rem; border-top: 1.5px solid var(--brume);
-}
-.hero__trust-item {
-  background: white; border: 1.5px solid var(--brume);
-  border-radius: var(--r-full); padding: .38rem 1rem;
-  font-size: .8rem; font-weight: 500; color: var(--ardoise);
-  box-shadow: var(--shadow-xs);
+.offer-price {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  margin-bottom: var(--space-5);
 }
 
-/* Colonne droite */
-.hero__right {
-  position: relative; display: flex;
-  justify-content: center; align-items: center;
-  height: 420px;
-}
-
-/* Carte box */
-.hero__box-card {
-  background: var(--nuit);
-  border-radius: 32px; padding: 2.5rem 2.5rem 2rem;
-  width: 300px;
-  box-shadow: var(--shadow-xl);
-  display: flex; flex-direction: column; gap: 1.5rem;
-  animation: float 5s ease-in-out infinite;
-  border: 3px solid rgba(246,201,14,.2);
-  position: relative; z-index: 1;
-}
-.hero__box-top {
-  display: flex; align-items: center; gap: 1rem;
-}
-.hero__box-logo {
-  height: 50px; width: auto;
-  /* Sur fond sombre le jaune ressort parfaitement */
-}
-.hero__box-mois {
-  font-family: var(--font-display); font-size: 1rem; font-weight: 700;
-  color: rgba(255,255,255,.8);
-}
-.hero__box-sizes { display: flex; gap: .6rem; }
-.hero__sz {
-  width: 44px; height: 44px; border-radius: 50%;
-  display: flex; align-items: center; justify-content: center;
-  font-family: var(--font-display); font-size: .82rem; font-weight: 900;
-  border: 2.5px solid;
-}
-.hero__sz--xs { background: #EDE9F8; color: #9B8EC4; border-color: #9B8EC4; }
-.hero__sz--s  { background: #FEFCE8; color: #D4A017; border-color: #D4A017; }
-.hero__sz--m  { background: #E0F4EF; color: #68B2A0; border-color: #68B2A0; }
-.hero__sz--l  { background: #EBF4FF; color: #2B6CB0; border-color: #2B6CB0; }
-.hero__box-tag {
-  font-size: .78rem; color: rgba(255,255,255,.45);
-  text-align: center; letter-spacing: .04em;
-}
-
-/* Badges flottants */
-.hero__badge-float {
-  position: absolute; background: white;
-  border: 1.5px solid var(--brume); border-radius: var(--r-lg);
-  padding: .55rem 1.1rem; font-size: .82rem; font-weight: 600;
-  color: var(--nuit); box-shadow: var(--shadow-md); z-index: 2;
-  white-space: nowrap;
-}
-.hero__badge-float--1 { top: 20px;  right: 10px;  animation: float 4s ease-in-out infinite .5s; }
-.hero__badge-float--2 { bottom: 80px; left: 5px;  animation: float 4.5s ease-in-out infinite 1s; }
-.hero__badge-float--3 { top: 48%;   right: -10px; animation: float 3.8s ease-in-out infinite .3s; }
-
-/* Vague hero → dark band */
-.hero__wave {
-  position: absolute; bottom: 0; left: 0; right: 0;
-  width: 100%; height: 60px; display: block;
-}
-
-/* ── Values band ─────────────────────────────────────────── */
-.values-band { background: var(--nuit); padding: 2rem 0; }
-.values-band__inner {
-  display: flex; gap: 2.5rem; justify-content: center; flex-wrap: wrap;
-}
-.values-band__item {
-  display: flex; align-items: center; gap: .9rem; color: white; min-width: 180px;
-}
-.values-band__icon {
-  width: 44px; height: 44px; border-radius: 50%;
-  background: rgba(246,201,14,.12);
-  border: 1px solid rgba(246,201,14,.2);
-  display: flex; align-items: center; justify-content: center;
-  font-size: 1.2rem; flex-shrink: 0;
-}
-.values-band__item strong { display: block; font-size: .9rem; font-weight: 600; margin-bottom: .1rem; }
-.values-band__item span   { font-size: .76rem; color: rgba(255,255,255,.45); }
-
-/* ── Section padding ─────────────────────────────────────── */
-.section-pad { padding: 6rem 0; }
-
-/* ── Why / Pourquoi Dawky ────────────────────────────────── */
-.why__inner {
-  display: grid; grid-template-columns: 1fr 1fr; gap: 5rem; align-items: center;
-}
-.why__visual { display: flex; flex-direction: column; gap: 2rem; }
-.why__logo-wrap {
-  background: var(--nuage); border-radius: var(--r-xl);
-  padding: 3rem 2.5rem; text-align: center;
-  border: 1.5px solid var(--brume);
-}
-.why__logo { max-width: 280px; margin: 0 auto 1rem; }
-.why__logo-sub { font-size: .85rem; color: var(--muted); }
-.why__colors { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
-.why__color {
-  border-radius: var(--r-lg); padding: 1.2rem;
-  text-align: center; border: 2px solid;
-}
-.why__color--bleu   { background: #EBF4FF; border-color: var(--bleu); }
-.why__color--jaune  { background: #FEFCE8; border-color: var(--jaune); }
-.why__color span  { display: block; font-family: var(--font-display); font-size: 1.2rem; font-weight: 900; margin-bottom: .2rem; }
-.why__color--bleu  span  { color: var(--bleu); }
-.why__color--jaune span  { color: var(--jaune); }
-.why__color small { font-size: .72rem; color: var(--muted); }
-
-.why__points { display: flex; flex-direction: column; gap: 1.2rem; margin-top: 2rem; }
-.why__point {
-  display: flex; gap: 1rem; align-items: flex-start;
-  background: var(--nuage); border-radius: var(--r-md);
-  padding: 1.1rem 1.3rem; border: 1.5px solid var(--brume);
-}
-.why__point-icon { font-size: 1.5rem; flex-shrink: 0; }
-.why__point strong { display: block; font-size: .92rem; font-weight: 600; margin-bottom: .2rem; }
-.why__point p { font-size: .83rem; color: var(--muted); line-height: 1.55; margin: 0; }
-
-/* ── How it works ────────────────────────────────────────── */
-.hiw__grid {
-  display: grid; grid-template-columns: repeat(3,1fr);
-  gap: 2.5rem; position: relative;
-}
-.hiw__step { text-align: center; position: relative; }
-.hiw__connector {
-  position: absolute; top: 36px; left: 62%; right: -38%;
-  height: 2px; z-index: 0;
-  background: repeating-linear-gradient(
-    90deg, var(--brume) 0, var(--brume) 6px, transparent 6px, transparent 14px
-  );
-}
-.hiw__circle {
-  width: 72px; height: 72px; border-radius: 50%;
-  display: flex; align-items: center; justify-content: center;
-  font-size: 2rem; margin: 0 auto 1rem;
-  box-shadow: var(--shadow-md); position: relative; z-index: 1;
-}
-.hiw__num { font-size: .72rem; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; color: var(--bleu); margin-bottom: .5rem; }
-.hiw__step h3 { font-family: var(--font-display); font-size: 1.15rem; font-weight: 700; margin-bottom: .5rem; color: var(--nuit); }
-.hiw__step p  { font-size: .88rem; color: var(--muted); line-height: 1.65; }
-
-/* ── Tailles ─────────────────────────────────────────────── */
-.tailles__grid {
-  display: grid; grid-template-columns: repeat(4,1fr); gap: 1.2rem;
-}
-.taille-card {
-  border-radius: var(--r-lg); overflow: hidden;
-  border: 2px solid var(--brume);
-  background: var(--blanc);
-  transition: transform .22s, box-shadow .22s;
-}
-.taille-card:hover { transform: translateY(-6px); box-shadow: var(--shadow-lg); }
-.taille-card__head {
-  display: flex; flex-direction: column; align-items: center;
-  justify-content: center; gap: .3rem;
-  padding: 1.8rem 1rem; border-bottom: 2px solid;
-}
-.taille-card__letter {
-  font-family: var(--font-display); font-size: 3rem; font-weight: 900; line-height: 1;
-}
-.taille-card__poids {
-  font-size: .8rem; font-weight: 600; color: var(--muted);
-}
-.taille-card__body { padding: 1.2rem 1.3rem; }
-.taille-card__race { font-size: .78rem; color: var(--muted); margin-bottom: .8rem; font-style: italic; }
-.taille-card__items { list-style: none; display: flex; flex-direction: column; gap: .35rem; }
-.taille-card__items li {
-  font-size: .82rem; color: var(--text);
-  display: flex; align-items: center; gap: .5rem;
-  padding-bottom: .35rem; border-bottom: 1px solid var(--brume);
-}
-.taille-card__items li:last-child { border: none; }
-.taille-card__items li::before { content: '·'; color: var(--bleu); font-weight: 900; flex-shrink: 0; }
-.taille-card__footer {
-  text-align: center; padding: .7rem 1rem;
-  font-size: .74rem; font-weight: 700;
-  color: var(--menthe); background: var(--menthe-pale);
-  border-top: 1px solid var(--brume);
-}
-
-/* ── CTA Band ────────────────────────────────────────────── */
-.cta-band {
-  background: linear-gradient(135deg, var(--bleu) 0%, var(--nuit) 100%);
-  padding: 5rem 0; position: relative; overflow: hidden;
-}
-.cta-band::before {
-  content: '🐾 🦴 🐾 🦴 🐾 🦴 🐾 🦴';
-  position: absolute; top: 1rem; width: 100%;
-  text-align: center; font-size: 1.3rem; opacity: .06;
-  letter-spacing: 2.5rem; pointer-events: none;
-}
-.cta-band__inner {
-  display: flex; align-items: center; justify-content: space-between;
-  gap: 3rem; flex-wrap: wrap; position: relative; z-index: 1;
-}
-.cta-band__text h2 {
+.offer-price-amount {
   font-family: var(--font-display);
-  font-size: clamp(1.8rem, 3.5vw, 2.8rem); font-weight: 900;
-  color: white; line-height: 1.1; margin-bottom: .5rem;
-}
-.cta-band__text h2 em { font-style: italic; color: var(--jaune-vif); }
-.cta-band__text p { color: rgba(255,255,255,.65); font-size: 1rem; }
-.cta-band__actions { display: flex; gap: 1rem; flex-wrap: wrap; }
-
-/* ── Animations ──────────────────────────────────────────── */
-@keyframes float {
-  0%,100% { transform: translateY(0); }
-  50%     { transform: translateY(-10px); }
+  font-size: 3rem;
+  font-weight: 900;
+  color: var(--blue);
+  line-height: 1;
 }
 
-/* ── Responsive ──────────────────────────────────────────── */
-@media (max-width: 1100px) {
-  .tailles__grid { grid-template-columns: repeat(2,1fr); }
+.offer-price-period {
+  font-size: 0.9rem;
+  color: var(--ink-muted);
 }
-@media (max-width: 900px) {
-  .hero__container { grid-template-columns: 1fr; padding-top: 7rem; padding-bottom: 4rem; }
-  .hero__right { display: none; }
-  .why__inner { grid-template-columns: 1fr; }
-  .hiw__grid { grid-template-columns: 1fr; }
-  .hiw__connector { display: none; }
-  .cta-band__inner { flex-direction: column; text-align: center; }
+
+.offer-features {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin-bottom: var(--space-5);
 }
-@media (max-width: 600px) {
-  .tailles__grid { grid-template-columns: 1fr; }
-  .hero__ctas { flex-direction: column; }
-  .values-band__inner { gap: 1.5rem; justify-content: flex-start; }
+
+.offer-features li {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  font-size: 0.9375rem;
+  color: var(--ink-soft);
+}
+
+.offer-check {
+  color: var(--blue);
+  font-weight: 700;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.offer-sizes {
+  display: flex;
+  gap: var(--space-2);
+  margin-bottom: var(--space-5);
+}
+
+.size-chip {
+  padding: 4px 12px;
+  border-radius: var(--radius-pill);
+  font-size: 0.8125rem;
+  font-weight: 700;
+  background: rgba(4,172,227,0.1);
+  color: var(--blue);
+}
+
+.size-chip-yellow {
+  background: rgba(255,187,51,0.15);
+  color: #9A6500;
+}
+
+/* ── HOW ─────────────────────────────────── */
+.how-section {
+  background: white;
+  position: relative;
+  overflow: hidden;
+}
+
+.how-bg {
+  position: absolute;
+  inset: 0;
+  opacity: 0.04;
+  pointer-events: none;
+}
+.how-pattern { width: 100%; height: 100%; object-fit: cover; }
+
+.steps-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--space-5);
+  margin-bottom: var(--space-8);
+}
+
+.step-card {
+  background: var(--cream);
+  border-radius: var(--radius-xl);
+  padding: var(--space-6);
+  text-align: center;
+  border: 2px solid var(--border);
+  transition: transform var(--duration-base) var(--ease-out);
+}
+
+.step-card:hover { transform: translateY(-4px); }
+
+.step-number {
+  font-family: var(--font-display);
+  font-size: 3rem;
+  font-weight: 900;
+  color: var(--blue);
+  opacity: 0.15;
+  line-height: 1;
+  margin-bottom: -8px;
+}
+
+.step-emoji { font-size: 2.5rem; margin-bottom: var(--space-3); }
+
+.step-title {
+  font-family: var(--font-display);
+  font-size: 1.25rem;
+  font-weight: 700;
+  margin-bottom: var(--space-3);
+}
+
+.step-desc { font-size: 0.9rem; color: var(--ink-soft); line-height: 1.5; }
+
+.how-cta { margin-top: var(--space-2); }
+
+/* ── CATEGORIES ─────────────────────────── */
+.products-section { background: var(--cream); }
+
+.categories-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: var(--space-4);
+}
+
+.category-card {
+  background: white;
+  border-radius: var(--radius-lg);
+  padding: var(--space-5) var(--space-4);
+  text-align: center;
+  border: 2px solid var(--border);
+  transition: transform var(--duration-base) var(--ease-out);
+}
+
+.category-card:hover { transform: translateY(-4px); box-shadow: var(--shadow-md); }
+
+.category-emoji { font-size: 2rem; margin-bottom: var(--space-3); }
+
+.category-img {
+  width: 80px;
+  height: 80px;
+  object-fit: contain;
+  margin: 0 auto var(--space-3);
+}
+
+.category-label {
+  font-weight: 700;
+  margin-bottom: var(--space-1);
+}
+
+.category-desc { font-size: 0.8125rem; color: var(--ink-muted); }
+
+/* ── MASCOTTES ───────────────────────────── */
+.mascots-section { background: white; overflow: hidden; }
+
+.mascots-inner {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-8);
+  align-items: center;
+}
+
+.mascots-sizes {
+  display: flex;
+  gap: var(--space-3);
+}
+
+.size-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  background: rgba(4,172,227,0.06);
+  border: 2px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: var(--space-3) var(--space-4);
+}
+
+.size-label {
+  font-family: var(--font-display);
+  font-size: 1.5rem;
+  font-weight: 900;
+  color: var(--blue);
+}
+
+.size-weight { color: var(--ink-muted); }
+
+.mascots-images {
+  position: relative;
+  height: 400px;
+}
+
+.mascot-img {
+  position: absolute;
+  filter: drop-shadow(0 10px 30px rgba(4,172,227,0.15));
+}
+.m1 { width: 160px; top: 0; left: 0; }
+.m2 { width: 200px; bottom: 0; right: 10%; }
+.m3 { width: 140px; top: 20%; right: 0; }
+
+/* ── TESTIMONIALS ────────────────────────── */
+.testimonials-section { background: var(--cream); }
+
+.testimonials-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-5);
+}
+
+.testimonial-card {
+  background: white;
+  border-radius: var(--radius-lg);
+  padding: var(--space-6);
+  border: 2px solid var(--border);
+  transition: transform var(--duration-base);
+}
+
+.testimonial-card:hover { transform: translateY(-4px); box-shadow: var(--shadow-md); }
+
+.testimonial-stars { font-size: 1.125rem; margin-bottom: var(--space-3); }
+
+.testimonial-text {
+  font-size: 0.9375rem;
+  color: var(--ink-soft);
+  line-height: 1.7;
+  font-style: italic;
+  margin-bottom: var(--space-5);
+}
+
+.testimonial-author {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.testimonial-avatar {
+  width: 44px; height: 44px;
+  background: var(--blue-light);
+  color: var(--blue-deep);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 1.125rem;
+  flex-shrink: 0;
+}
+
+/* ── CTA FINAL ───────────────────────────── */
+.cta-section { padding: 0 0 var(--space-9); }
+
+.cta-card {
+  background: var(--blue);
+  border-radius: var(--radius-xl);
+  padding: var(--space-9) var(--space-6);
+  position: relative;
+  overflow: hidden;
+}
+
+.cta-pattern {
+  position: absolute;
+  inset: 0;
+  opacity: 0.06;
+  pointer-events: none;
+}
+.cta-pattern img { width: 100%; height: 100%; object-fit: cover; }
+
+.cta-content { position: relative; z-index: 1; }
+
+.cta-sachet {
+  width: 120px;
+  margin: 0 auto var(--space-4);
+  filter: drop-shadow(0 10px 30px rgba(0,0,0,0.2));
+}
+
+.cta-sub {
+  color: rgba(255,255,255,0.75);
+  margin: var(--space-3) 0 var(--space-6);
+}
+
+.cta-buttons {
+  display: flex;
+  gap: var(--space-3);
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+/* ── RESPONSIVE ──────────────────────────── */
+@media (max-width: 1024px) {
+  .categories-grid { grid-template-columns: repeat(3, 1fr); }
+  .steps-grid { grid-template-columns: repeat(2, 1fr); }
+}
+
+@media (max-width: 768px) {
+  .hero-inner { grid-template-columns: 1fr; text-align: center; }
+  .hero-visual { display: none; }
+  .hero-ctas { justify-content: center; }
+  .hero-trust { justify-content: center; }
+  .hero-desc { margin: 0 auto var(--space-6); }
+  .offers-grid { grid-template-columns: 1fr; }
+  .steps-grid { grid-template-columns: 1fr; }
+  .categories-grid { grid-template-columns: repeat(2, 1fr); }
+  .testimonials-grid { grid-template-columns: 1fr; }
+  .mascots-inner { grid-template-columns: 1fr; }
+  .mascots-images { height: 200px; }
+}
+
+@media (max-width: 480px) {
+  .categories-grid { grid-template-columns: 1fr 1fr; }
+  .mascots-sizes { flex-wrap: wrap; }
 }
 </style>
