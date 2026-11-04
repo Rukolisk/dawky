@@ -44,7 +44,7 @@
         </template>
       </div>
     </div>
-    <VisuelChien class="abo-visuel" :alt="`Box de ${abo.chien.nom}`" />
+    <VisuelChien class="abo-visuel" src="/images/photos/texture-dalmatien.jpg" alt="" />
 
     <!-- Changer de taille -->
     <ModaleDawky :ouverte="modale === 'taille'" titre="Changer de taille" @fermer="modale = null">

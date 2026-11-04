@@ -10,6 +10,7 @@
 
 import { Resend } from 'resend'
 import { formatPrix } from './metier'
+import { LOGO_EMAIL_CID, LOGO_EMAIL_PNG_BASE64 } from './logo-email'
 
 let _resend: Resend | null = null
 
@@ -66,7 +67,7 @@ function petit(texte: string): string {
 }
 
 function bouton(lien: string, texte: string): string {
-  return `<a href="${esc(lien)}" style="display:inline-block;background:${BURGUNDY};color:#ffffff;text-decoration:none;padding:14px 28px;border-radius:4px;font-size:16px;margin:8px 0 24px;">${texte}</a>`
+  return `<a href="${esc(lien)}" style="display:inline-block;background:${BURGUNDY};color:#ffffff;text-decoration:none;padding:14px 28px;border-radius:999px;font-size:16px;margin:8px 0 24px;">${texte}</a>`
 }
 
 // Tableau récapitulatif clé / valeur (les valeurs doivent déjà être échappées)
@@ -103,7 +104,8 @@ function layout(contenu: string, title: string, piedSupplementaire = ''): string
       <table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;">
         <tr>
           <td style="background:${NOIR};padding:28px 32px;text-align:center;">
-            <div style="font-size:28px;letter-spacing:.2em;color:#ffffff;font-family:Georgia,serif;">DAWKY</div>
+            <img src="cid:${LOGO_EMAIL_CID}" width="179" height="77" alt="Dawky"
+                 style="display:inline-block;width:179px;height:auto;border:0;color:#ffffff;font-size:28px;font-family:Georgia,serif;" />
           </td>
         </tr>
         <tr>
@@ -128,13 +130,23 @@ function layout(contenu: string, title: string, piedSupplementaire = ''): string
 
 async function envoyer(to: string, subject: string, contenu: string, piedSupplementaire = '') {
   const config = useRuntimeConfig()
-  await getResend().emails.send({
+  // Resend ne lève pas d'exception : une erreur (expéditeur non vérifié,
+  // quota…) est renvoyée dans `error` et doit être remontée explicitement.
+  const { error } = await getResend().emails.send({
     from: config.emailFrom as string,
     replyTo: config.emailReplyTo as string,
     to,
     subject,
     html: layout(contenu, subject, piedSupplementaire),
+    // Logo de l'en-tête, joint en image intégrée (cid:)
+    attachments: [{
+      filename: 'dawky.png',
+      content: LOGO_EMAIL_PNG_BASE64,
+      contentType: 'image/png',
+      inlineContentId: LOGO_EMAIL_CID,
+    }],
   })
+  if (error) throw new Error(`Resend : ${error.message}`)
 }
 
 function rappelChien(nomChien: string, taille: string): string {
@@ -154,6 +166,14 @@ export async function sendWelcomeEmail(to: string, prenom: string) {
     ${para('Votre compte Dawky est créé. Chaque mois, une box adaptée à la taille de votre chien, avec un jouet, une friandise, un produit à mâcher et un accessoire.')}
     ${para('Pas encore sûr de la taille ? Notre quiz vous guide en 3 étapes.')}
     ${bouton(`${appUrl()}/quiz`, 'Trouver la box de mon chien')}`)
+}
+
+export async function sendReinitialisationMotDePasse(to: string, lien: string) {
+  await envoyer(to, 'Choisir un nouveau mot de passe Dawky', `
+    ${titre('Nouveau mot de passe')}
+    ${para('Vous avez demandé à changer le mot de passe de votre compte Dawky. Cliquez sur le bouton ci-dessous pour en choisir un nouveau.')}
+    ${bouton(lien, 'Choisir un nouveau mot de passe')}
+    ${petit('Ce lien est valable une heure et ne fonctionne qu\'une fois. Si vous n\'êtes pas à l\'origine de cette demande, ignorez cet email : votre mot de passe actuel reste valable.')}`)
 }
 
 // ─── Quiz ─────────────────────────────────

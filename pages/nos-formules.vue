@@ -8,7 +8,7 @@
 
     <section class="conteneur formules">
       <article class="formule fond-noir">
-        <VisuelChien class="formule-visuel" alt="La Box Surprise Dawky" />
+        <VisuelChien class="formule-visuel" src="/images/photos/formule-surprise.jpg" alt="Un dalmatien assis sur fond blanc" position="50% 8%" />
         <div class="formule-texte">
           <p class="surtitre surtitre-clair">Abonnement mensuel</p>
           <h2 class="titre-3">Box Surprise</h2>
@@ -26,7 +26,7 @@
       </article>
 
       <article class="formule fond-gris">
-        <VisuelChien class="formule-visuel" alt="Une box composée par un client" />
+        <VisuelChien class="formule-visuel" src="/images/photos/formule-compose.jpg" alt="Un dalmatien couché dans l'herbe, en noir et blanc" position="50% 55%" />
         <div class="formule-texte">
           <p class="surtitre">Commande unique</p>
           <h2 class="titre-3">Compose ta box</h2>

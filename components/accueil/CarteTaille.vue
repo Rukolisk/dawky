@@ -1,7 +1,10 @@
 <!-- components/accueil/CarteTaille.vue — carte d'une taille S / M / L (US-07) -->
 <template>
   <article class="carte">
-    <VisuelChien class="carte-visuel" :alt="`Chien de taille ${infos.taille}`" />
+    <VisuelChien
+      class="carte-visuel" :src="`/images/photos/taille-${infos.taille.toLowerCase()}.jpg`"
+      :alt="`Un chien de taille ${infos.taille} (${infos.poids.toLowerCase()})`" position="50% 30%"
+    />
     <div class="carte-texte">
       <p class="carte-lettre" aria-hidden="true">{{ infos.taille }}</p>
       <h3 class="sr-only">Taille {{ infos.taille }}</h3>

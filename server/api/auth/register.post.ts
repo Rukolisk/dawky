@@ -33,6 +33,19 @@ export default defineEventHandler(async (event) => {
     const existant = await prisma.client.findUnique({ where: { supabaseUid: supabaseUser.id } })
     if (existant) return apiSuccess({ id: existant.id, email: existant.email })
 
+    // Profil au même email sans compte de connexion rattaché (compte
+    // Supabase recréé) : on le rattache plutôt que d'échouer sur l'email unique.
+    // Un profil déjà rattaché à un AUTRE compte n'est jamais repris.
+    const memeEmail = await prisma.client.findUnique({ where: { email } })
+    if (memeEmail && !memeEmail.supabaseUid) {
+      const rattache = await prisma.client.update({
+        where: { id: memeEmail.id },
+        data: { supabaseUid: supabaseUser.id },
+      })
+      return apiSuccess({ id: rattache.id, email: rattache.email })
+    }
+    if (memeEmail) throw createError({ statusCode: 409, statusMessage: 'Un profil existe déjà pour cet email' })
+
     const client = await prisma.client.create({
       data: {
         supabaseUid:    supabaseUser.id,

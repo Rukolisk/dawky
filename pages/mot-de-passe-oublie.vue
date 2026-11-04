@@ -23,7 +23,7 @@
 </template>
 
 <script setup lang="ts">
-definePageMeta({ layout: 'scinde', visuelADroite: true })
+definePageMeta({ layout: 'scinde', visuelADroite: true, visuel: '/images/photos/connexion.jpg' })
 useSeoMeta({ title: 'Mot de passe oublié — Dawky' })
 
 const { demanderReinitialisation } = useAuth()

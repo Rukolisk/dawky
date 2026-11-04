@@ -28,11 +28,11 @@
 </template>
 
 <script setup lang="ts">
-definePageMeta({ layout: 'scinde', visuelADroite: true })
+definePageMeta({ layout: 'scinde', visuelADroite: true, visuel: '/images/photos/connexion.jpg' })
 useSeoMeta({ title: 'Connexion — Dawky' })
 
 const route = useRoute()
-const { signIn, isAdmin } = useAuth()
+const { signIn, isAdmin, profilManquant } = useAuth()
 const email = ref('')
 const motDePasse = ref('')
 const erreur = ref('')
@@ -48,6 +48,11 @@ async function connecter() {
   try {
     await signIn(email.value, motDePasse.value)
     const redirect = typeof route.query.redirect === 'string' && route.query.redirect.startsWith('/') ? route.query.redirect : null
+    // Compte sans profil Dawky (profil effacé) : on le complète d'abord
+    if (profilManquant.value) {
+      await navigateTo({ path: '/inscription', query: { completer: '1', ...(redirect ? { redirect } : {}) } })
+      return
+    }
     await navigateTo(redirect ?? (isAdmin.value ? '/admin' : '/mon-compte'))
   } catch (err) {
     erreur.value = (err as Error).message

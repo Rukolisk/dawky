@@ -1,11 +1,11 @@
 <!-- layouts/scinde.vue
      Écran coupé en deux (quiz, connexion, inscription) : une photo pleine
      hauteur d'un côté, le contenu de l'autre. La photo est masquée sur
-     mobile. Les pages passent la photo via le slot "visuel". -->
+     mobile. Les pages choisissent la photo via definePageMeta({ visuel }). -->
 <template>
   <div class="scinde" :class="{ 'visuel-a-droite': visuelADroite }">
     <div class="scinde-visuel">
-      <slot name="visuel"><VisuelChien alt="" /></slot>
+      <VisuelChien :src="visuel" alt="" position="50% 30%" />
     </div>
     <main id="contenu" class="scinde-contenu">
       <slot />
@@ -17,6 +17,7 @@
 // Le visuel est à gauche pour le quiz, à droite pour la connexion
 const route = useRoute()
 const visuelADroite = computed(() => route.meta.visuelADroite === true)
+const visuel = computed(() => (typeof route.meta.visuel === 'string' ? route.meta.visuel : undefined))
 </script>
 
 <style scoped>

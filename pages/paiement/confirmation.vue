@@ -36,7 +36,7 @@
         <p role="status">Nous confirmons votre paiement. Ne fermez pas cette page.</p>
       </template>
     </section>
-    <VisuelChien class="confirmation-visuel" alt="" />
+    <VisuelChien class="confirmation-visuel" src="/images/photos/confirmation.jpg" alt="" position="50% 35%" />
   </div>
 </template>
 

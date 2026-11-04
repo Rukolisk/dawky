@@ -37,7 +37,7 @@
             <NuxtLink to="/comment-dawky-adapte-ma-box" class="lien">Comment Dawky adapte sa box à ses allergies</NuxtLink>
           </p>
         </div>
-        <VisuelChien class="resultat-visuel" :alt="`Box Dawky taille ${res.taille}`" />
+        <VisuelChien class="resultat-visuel" :src="PHOTOS_RESULTAT[res.taille]" :alt="`Un chien de taille ${res.taille}`" position="50% 30%" />
       </section>
 
       <section class="fond-gris contenu-box">
@@ -88,6 +88,12 @@ const { resultat: res, reponses } = useQuiz()
 onMounted(() => {
   if (!res.value) navigateTo('/quiz', { replace: true })
 })
+
+const PHOTOS_RESULTAT: Record<string, string> = {
+  S: '/images/photos/taille-s.jpg',
+  M: '/images/photos/taille-m.jpg',
+  L: '/images/photos/resultat-l.jpg',
+}
 
 const nom = computed(() => reponses.value.nomChien.trim() || 'Votre chien')
 const estCompose = computed(() => res.value?.formuleRecommandee === 'COMPOSE')

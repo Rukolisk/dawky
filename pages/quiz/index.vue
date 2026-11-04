@@ -121,7 +121,7 @@
 <script setup lang="ts">
 import type { Allergene } from '~/composables/types'
 
-definePageMeta({ layout: 'scinde' })
+definePageMeta({ layout: 'scinde', visuel: '/images/photos/quiz.jpg' })
 useSeoMeta({ title: 'Trouver sa box — Dawky' })
 
 const ECRANS = [

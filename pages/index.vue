@@ -18,7 +18,7 @@
           <template v-if="prixMin">Dès {{ formatPrix(prixMin) }}/mois · </template>Sans engagement · Livraison offerte
         </p>
       </div>
-      <VisuelChien class="hero-visuel" alt="Un chien découvre sa box Dawky" />
+      <VisuelChien class="hero-visuel" src="/images/photos/accueil-hero.jpg" alt="Un braque assis sur fond gris, le regard tourné vers le haut" position="50% 30%" prioritaire />
     </section>
 
     <!-- Réassurance -->
@@ -59,7 +59,7 @@
 
     <!-- Contenu secret -->
     <section class="secret">
-      <VisuelChien class="secret-visuel" alt="Le contenu d'une box Dawky" />
+      <VisuelChien class="secret-visuel" src="/images/photos/accueil-contenu.jpg" alt="Un teckel sort la tête d'un carton" position="40% 50%" />
       <div class="secret-texte fond-gris">
         <h2 class="titre-2">Le contenu reste secret. <em>Pas la qualité.</em></h2>
         <p>Vous savez ce qu'il y aura dans la box, sans savoir quoi exactement.</p>
@@ -94,7 +94,7 @@
         </p>
         <NuxtLink to="/offrir" class="btn btn-secondaire btn-grand">Offrir une box</NuxtLink>
       </div>
-      <VisuelChien class="cadeau-visuel" alt="Une box Dawky emballée pour un cadeau" />
+      <VisuelChien class="cadeau-visuel" src="/images/photos/accueil-cadeau.jpg" alt="Un chien couché sur le dos dans l'herbe, tout content" position="50% 35%" />
     </section>
 
     <!-- Avis (affiché seulement s'il y a des avis publiés) -->

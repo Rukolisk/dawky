@@ -45,33 +45,49 @@ const MESSAGES_AUTH: Array<[RegExp, string]> = [
   [/rate limit|too many/i, 'Trop de tentatives. Patientez quelques minutes avant de réessayer.'],
   [/invalid email|unable to validate email/i, 'Adresse email invalide.'],
   [/same password|different from the old/i, 'Le nouveau mot de passe doit être différent de l\'ancien.'],
+  [/error sending|sending (recovery|confirmation|magic link) email|smtp/i, 'Nous n\'avons pas pu envoyer l\'email pour le moment. Réessayez plus tard ou écrivez-nous depuis la page Aide.'],
+  [/email address not authorized/i, 'L\'envoi d\'emails n\'est pas encore activé pour cette adresse. Écrivez-nous depuis la page Aide.'],
 ]
 
 export function traduireErreurAuth(err: unknown): string {
   const message = (err as { message?: string })?.message ?? ''
-  return MESSAGES_AUTH.find(([re]) => re.test(message))?.[1]
-    ?? 'Une erreur est survenue. Réessayez dans un instant.'
+  const traduit = MESSAGES_AUTH.find(([re]) => re.test(message))?.[1]
+  // Message d'origine gardé dans la console pour le diagnostic
+  if (!traduit) console.error('[Auth] Erreur Supabase non traduite :', err)
+  return traduit ?? 'Une erreur est survenue. Réessayez dans un instant.'
 }
 
 export function useAuth() {
   const user = useState<User | null>('auth-user', () => null)
   const profile = useState<Profil | null>('auth-profile', () => null)
   const ready = useState<boolean>('auth-ready', () => false)
+  // Connecté à Supabase mais sans profil Dawky (profil effacé, inscription
+  // interrompue) : le client doit compléter son profil (/inscription?completer=1)
+  const profilManquant = useState<boolean>('auth-profil-manquant', () => false)
 
   async function fetchProfile() {
     try {
       const res = await $fetch<{ data: Profil }>('/api/auth/profile')
       profile.value = res.data
+      profilManquant.value = false
     } catch (err) {
       const status = (err as { statusCode?: number })?.statusCode
       // Compte Supabase sans profil Dawky : inscription confirmée par email
       if (status === 404 && (await finaliserInscription())) {
         const res = await $fetch<{ data: Profil }>('/api/auth/profile')
         profile.value = res.data
+        profilManquant.value = false
       } else {
         profile.value = null
+        profilManquant.value = status === 404
       }
     }
+  }
+
+  /** Recrée le profil Dawky d'un compte connecté qui n'en a pas */
+  async function completerProfil(infos: InfosInscription) {
+    await $fetch('/api/auth/register', { method: 'POST', body: infos })
+    await fetchProfile()
   }
 
   async function finaliserInscription(): Promise<boolean> {
@@ -134,14 +150,17 @@ export function useAuth() {
     await getSupabase().auth.signOut()
     user.value = null
     profile.value = null
+    profilManquant.value = false
     await navigateTo('/')
   }
 
+  // Le lien est envoyé par notre serveur (Resend), pas par le SMTP Supabase
   async function demanderReinitialisation(email: string) {
-    const { error } = await getSupabase().auth.resetPasswordForEmail(email, {
-      redirectTo: `${useRuntimeConfig().public.appUrl}/mot-de-passe/nouveau`,
-    })
-    if (error) throw new Error(traduireErreurAuth(error))
+    try {
+      await $fetch('/api/auth/mot-de-passe-oublie', { method: 'POST', body: { email } })
+    } catch (err) {
+      throw new Error(versApiError(err).message)
+    }
   }
 
   async function changerMotDePasse(password: string) {
@@ -153,7 +172,7 @@ export function useAuth() {
   const isAdmin = computed(() => profile.value?.role === 'ADMIN')
 
   return {
-    user, profile, ready, isLoggedIn, isAdmin,
-    init, fetchProfile, signIn, signUp, signOut, demanderReinitialisation, changerMotDePasse,
+    user, profile, ready, isLoggedIn, isAdmin, profilManquant,
+    init, fetchProfile, completerProfil, signIn, signUp, signOut, demanderReinitialisation, changerMotDePasse,
   }
 }

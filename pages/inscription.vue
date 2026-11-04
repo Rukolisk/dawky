@@ -3,8 +3,14 @@
 <template>
   <div class="auth">
     <LogoDawky :hauteur="44" />
-    <h1 class="titre-2">Créer mon <em>compte</em></h1>
-    <p>Pour suivre vos box et gérer votre abonnement.</p>
+    <template v-if="completer">
+      <h1 class="titre-2">Compléter mon <em>profil</em></h1>
+      <p>Vous êtes connecté avec <strong>{{ user?.email }}</strong>, mais votre profil Dawky est à compléter. Il ne manque que votre nom.</p>
+    </template>
+    <template v-else>
+      <h1 class="titre-2">Créer mon <em>compte</em></h1>
+      <p>Pour suivre vos box et gérer votre abonnement.</p>
+    </template>
 
     <div v-if="confirmation" class="info" role="status">
       <p><strong>Plus qu'une étape&nbsp;!</strong> Nous avons envoyé un lien de confirmation à {{ email }}. Cliquez dessus, puis connectez-vous.</p>
@@ -21,11 +27,11 @@
           <input id="i-nom" v-model.trim="nom" class="input" autocomplete="family-name" required />
         </div>
       </div>
-      <div class="champ">
+      <div v-if="!completer" class="champ">
         <label for="i-email">Email</label>
         <input id="i-email" v-model.trim="email" class="input" type="email" autocomplete="email" required />
       </div>
-      <div class="champ">
+      <div v-if="!completer" class="champ">
         <label for="i-mdp">Mot de passe</label>
         <input
           id="i-mdp" v-model="motDePasse" class="input" type="password" autocomplete="new-password"
@@ -48,22 +54,26 @@
 
       <p v-if="erreur" class="message-erreur" role="alert">{{ erreur }}</p>
       <button class="btn btn-principal btn-grand btn-bloc" :disabled="envoi">
-        {{ envoi ? 'Création…' : 'Créer mon compte' }}
+        {{ envoi ? 'Un instant…' : completer ? 'Enregistrer mon profil' : 'Créer mon compte' }}
       </button>
     </form>
 
-    <p class="petit">Déjà un compte&nbsp;? <NuxtLink :to="{ path: '/connexion', query: route.query }" class="lien">Se connecter</NuxtLink></p>
+    <p v-if="completer" class="petit">Ce n'est pas vous&nbsp;? <button type="button" class="lien" @click="signOut">Se déconnecter</button></p>
+    <p v-else class="petit">Déjà un compte&nbsp;? <NuxtLink :to="{ path: '/connexion', query: route.query }" class="lien">Se connecter</NuxtLink></p>
   </div>
 </template>
 
 <script setup lang="ts">
 import { CLE_PARRAIN } from '~/plugins/03.parrainage.client'
 
-definePageMeta({ layout: 'scinde', visuelADroite: true })
+definePageMeta({ layout: 'scinde', visuelADroite: true, visuel: '/images/photos/connexion.jpg' })
 useSeoMeta({ title: 'Créer un compte — Dawky' })
 
 const route = useRoute()
-const { signUp } = useAuth()
+const { signUp, signOut, completerProfil, isLoggedIn, profilManquant, user } = useAuth()
+
+// Connecté mais sans profil Dawky : on ne demande que le nom
+const completer = computed(() => isLoggedIn.value && profilManquant.value)
 const { resultat, reponses } = useQuiz()
 const toast = useToast()
 
@@ -85,19 +95,29 @@ const nomChienQuiz = computed(() => (resultat.value ? reponses.value.nomChien.tr
 async function inscrire() {
   erreur.value = ''
   if (!prenom.value || !nom.value) return (erreur.value = 'Indiquez votre prénom et votre nom.')
-  if (!/^\S+@\S+\.\S+$/.test(email.value)) return (erreur.value = 'Saisissez une adresse email valide.')
-  if (motDePasse.value.length < 6) return (erreur.value = 'Le mot de passe doit contenir au moins 6 caractères.')
+  if (!completer.value) {
+    if (!/^\S+@\S+\.\S+$/.test(email.value)) return (erreur.value = 'Saisissez une adresse email valide.')
+    if (motDePasse.value.length < 6) return (erreur.value = 'Le mot de passe doit contenir au moins 6 caractères.')
+  }
   if (!cgv.value) return (erreur.value = 'Acceptez les conditions générales pour créer votre compte.')
 
+  const infos = {
+    prenom: prenom.value,
+    nom: nom.value,
+    codeParrainage: codeParrain.value ?? undefined,
+    quizResultId: resultat.value?.id,
+    consentementChien: !!nomChienQuiz.value && consentementChien.value,
+  }
   envoi.value = true
   try {
-    const { confirmationRequise } = await signUp(email.value, motDePasse.value, {
-      prenom: prenom.value,
-      nom: nom.value,
-      codeParrainage: codeParrain.value ?? undefined,
-      quizResultId: resultat.value?.id,
-      consentementChien: !!nomChienQuiz.value && consentementChien.value,
-    })
+    if (completer.value) {
+      await completerProfil(infos)
+      toast.success(`Profil enregistré, bienvenue ${prenom.value} !`)
+      const redirect = typeof route.query.redirect === 'string' && route.query.redirect.startsWith('/') ? route.query.redirect : '/mon-compte'
+      await navigateTo(redirect)
+      return
+    }
+    const { confirmationRequise } = await signUp(email.value, motDePasse.value, infos)
     if (confirmationRequise) {
       confirmation.value = true
       return
@@ -107,7 +127,7 @@ async function inscrire() {
     const redirect = typeof route.query.redirect === 'string' && route.query.redirect.startsWith('/') ? route.query.redirect : '/mon-compte'
     await navigateTo(redirect)
   } catch (err) {
-    erreur.value = err instanceof ApiError ? err.message : (err as Error).message
+    erreur.value = (err as { statusCode?: number }).statusCode ? versApiError(err).message : (err as Error).message
   } finally {
     envoi.value = false
   }

@@ -69,7 +69,8 @@ Réductions : un seul code par paiement (code promo ou code de parrainage), pass
 ### Client connecté
 | Méthode | Route | Rôle |
 |---|---|---|
-| POST | `/api/auth/register` | Profil après inscription Supabase (`codeParrainage`, `quizResultId` + `consentementChien`) |
+| POST | `/api/auth/register` | Profil après inscription Supabase (`codeParrainage`, `quizResultId` + `consentementChien`) ; rattache un profil orphelin au même email |
+| POST | `/api/auth/mot-de-passe-oublie` | Lien de réinitialisation généré par Supabase, envoyé par Resend (réponse identique si l'email est inconnu) |
 | GET / PUT / DELETE | `/api/auth/profile` | Espace client / rectification / suppression RGPD |
 | GET | `/api/auth/export` | Export JSON des données |
 | GET / POST, PUT / DELETE `:id` | `/api/adresses` | Adresses de livraison |
@@ -109,4 +110,5 @@ Réductions : un seul code par paiement (code promo ou code de parrainage), pass
 
 - **Points relais** : l'API stocke l'identifiant et le libellé du point choisi. La recherche se fera par le widget JavaScript du transporteur côté front, une fois le transporteur choisi.
 - Connexion Google/Apple, plusieurs abonnements par chien, tableau de bord KPI : prévus en v2 dans le cahier des charges.
-- Le mot de passe oublié est géré côté front par `supabase.auth.resetPasswordForEmail`.
+- Emails : tous partent par Resend depuis `EMAIL_FROM`, qui doit être une adresse d'un domaine vérifié dans Resend (`contact@dawky.fr`), jamais une adresse gmail. Le mot de passe oublié n'utilise pas le SMTP de Supabase.
+- Dans Supabase (Authentication > URL Configuration), ajouter `http://localhost:3000/**` et `https://dawky.fr/**` aux Redirect URLs, sinon le lien de réinitialisation renvoie vers la Site URL.

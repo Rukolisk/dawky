@@ -128,6 +128,7 @@ export const supabaseAuthMock = {
   admin: {
     deleteUser: vi.fn(),
     updateUserById: vi.fn(),
+    generateLink: vi.fn(),
   },
 };
 
