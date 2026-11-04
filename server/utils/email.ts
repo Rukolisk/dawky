@@ -196,7 +196,7 @@ export async function sendQuizRecommandation(to: string, d: {
     ${d.allergenes.length > 0
       ? para(`Vous avez signalé : <strong>${d.allergenes.map(esc).join(', ')}</strong>. Dans Compose ta box, ces allergènes sont filtrés automatiquement et chaque produit affiche sa composition complète.`)
       : ''}
-    ${bouton(`${appUrl()}/${estCompose ? 'compose-ta-box' : 'abonnement'}?taille=${esc(d.taille)}`,
+    ${bouton(`${appUrl()}/${estCompose ? 'compose-ta-box?' : 'commande?formule=surprise&'}taille=${esc(d.taille)}`,
       estCompose ? 'Composer ma box' : 'Découvrir la Box Surprise')}`)
 }
 
