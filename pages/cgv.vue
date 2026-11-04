@@ -1,95 +1,73 @@
+<!-- pages/cgv.vue — ⚠️ texte à faire valider juridiquement -->
 <template>
-  <div class="legal-page section">
-    <div class="container-sm">
-      <h1 class="display-md mb-7">Conditions Générales de Vente</h1>
-      <p class="text-soft mb-6">Dernière mise à jour : {{ new Date().toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' }) }}</p>
-
-      <div v-for="section in sections" :key="section.title" class="legal-block">
-        <h2>{{ section.title }}</h2>
-        <p v-for="p in section.paragraphs" :key="p">{{ p }}</p>
-      </div>
-    </div>
-  </div>
+  <PageTexte titre="Conditions générales de vente" mise-a-jour="novembre 2026" :sections="sections" />
 </template>
 
 <script setup lang="ts">
-useSeoMeta({ title: 'CGV — Dawky' })
+useSeoMeta({ title: 'Conditions générales de vente — Dawky' })
 
 const sections = [
   {
-    title: 'Article 1 — Objet',
-    paragraphs: [
-      'Les présentes Conditions Générales de Vente (CGV) régissent les relations contractuelles entre la société Dawky SAS (ci-après "Dawky") et toute personne physique effectuant un achat sur le site dawky.fr (ci-après "le Client").',
-      'Toute commande implique l\'acceptation sans réserve des présentes CGV.',
+    titre: '1. Objet',
+    paragraphes: [
+      'Les présentes conditions générales de vente (CGV) régissent les ventes conclues sur le site dawky.fr entre la société Dawky (« Dawky ») et toute personne physique agissant en qualité de consommateur (« le Client »).',
+      'Toute commande implique l\'acceptation des présentes CGV, cochée par le Client avant le paiement.',
     ],
   },
   {
-    title: 'Article 2 — Produits et services',
-    paragraphs: [
-      'Dawky propose deux types de box pour chiens : la Box Surprise (abonnement mensuel) et la Box À la Carte (commande ponctuelle). Chaque box contient 5 produits sélectionnés selon la taille du chien (XS, S, M, L).',
-      'Les photographies et descriptions sont données à titre indicatif. Les produits inclus dans la Box Surprise peuvent varier chaque mois.',
+    titre: '2. Offres',
+    liste: [
+      'Box Surprise : abonnement mensuel sans engagement. Chaque box contient des produits (friandise, mastication, jouet, accessoire) et une carte collector, adaptés à la taille du chien (S, M ou L). Le contenu exact reste une surprise.',
+      'Compose ta box : commande unique de 5 produits choisis par le Client parmi les produits des mois précédents encore disponibles.',
+      'Box saisonnières : commande unique, sans abonnement, pendant leur période de vente.',
+      'Abonnement offert : Box Surprise prépayée pour une durée choisie (3, 6 ou 12 mois), livrée à l\'adresse indiquée par l\'acheteur, sans renouvellement automatique.',
     ],
   },
   {
-    title: 'Article 3 — Prix',
-    paragraphs: [
-      'Les prix sont indiqués en euros TTC. Dawky se réserve le droit de modifier ses prix à tout moment, mais les commandes seront facturées au tarif en vigueur lors de la validation de la commande.',
-      'La livraison est offerte pour toutes les commandes vers la France, la Belgique, la Suisse et le Luxembourg.',
+    titre: '3. Prix et paiement',
+    paragraphes: [
+      'Les prix sont indiqués en euros toutes taxes comprises, livraison incluse en France métropolitaine. Le prix applicable est celui affiché au moment de la commande ; un changement de tarif ne s\'applique pas aux abonnements déjà souscrits.',
+      'Le paiement s\'effectue par carte bancaire via notre prestataire Stripe. Dawky n\'a jamais accès aux données de carte. L\'abonnement est prélevé à la souscription puis chaque mois à la même date. Une facture est disponible dans l\'espace client.',
+      'Les réductions (codes promo, parrainage) ne sont pas cumulables entre elles et s\'appliquent au premier paiement concerné.',
     ],
   },
   {
-    title: 'Article 4 — Abonnement et résiliation',
-    paragraphs: [
-      'L\'abonnement Box Surprise est sans engagement. Le Client peut résilier à tout moment depuis son espace client, sans frais. La résiliation prend effet à la fin du mois en cours.',
-      'En cas de résiliation, le Client ne sera pas débité pour le mois suivant. Les box déjà préparées et expédiées ne peuvent être remboursées.',
+    titre: '4. Abonnement : changement, pause, résiliation',
+    paragraphes: [
+      'L\'abonnement est sans engagement. Depuis son espace client, le Client peut changer de taille (prise en compte dès la prochaine période), mettre l\'abonnement en pause pour une durée limitée, ou le résilier en un clic.',
+      'La résiliation arrête les prélèvements futurs ; la période déjà payée reste due et sa box est livrée. Aucun remboursement n\'est dû pour une box déjà expédiée.',
     ],
   },
   {
-    title: 'Article 5 — Livraison',
-    paragraphs: [
-      'Les box Surprise sont expédiées le 1er de chaque mois. Les commandes Box À la Carte sont expédiées sous 3 à 5 jours ouvrés.',
-      'En cas d\'absence lors de la livraison, un avis de passage sera déposé et le colis sera mis en instance pendant 15 jours.',
+    titre: '5. Livraison',
+    paragraphes: [
+      'Les Box Surprise et les abonnements offerts sont expédiés le 1er de chaque mois. Les commandes Compose ta box et box saisonnières sont expédiées sous 3 à 5 jours ouvrés.',
+      'La livraison est offerte, à domicile ou en point relais, en France métropolitaine. Le Client (et, pour un cadeau, l\'acheteur) est prévenu par email de l\'expédition puis de la livraison.',
     ],
   },
   {
-    title: 'Article 6 — Retours et remboursements',
-    paragraphs: [
-      'Si votre chien n\'est pas satisfait d\'un produit, contactez-nous dans les 30 jours suivant la réception. Nous procéderons au remplacement ou au remboursement du produit concerné.',
-      'Les produits de nutrition et friandises entamés ne peuvent pas être retournés pour des raisons d\'hygiène.',
+    titre: '6. Allergies',
+    paragraphes: [
+      'Le Client déclare les allergies de son chien dans sa fiche. Pour la Box Surprise, l\'équipe Dawky le contacte afin de valider un profil sans allergènes avant l\'expédition. Pour Compose ta box, la composition, les allergènes et les traces possibles de chaque produit sont affichés avant l\'achat.',
+      'Ces informations ne remplacent pas l\'avis d\'un vétérinaire.',
     ],
   },
   {
-    title: 'Article 7 — Données personnelles',
-    paragraphs: [
-      'Les données collectées sont utilisées uniquement pour le traitement de vos commandes et la gestion de votre abonnement. Elles ne sont jamais revendues à des tiers.',
-      'Conformément au RGPD, vous pouvez exercer vos droits d\'accès, de rectification et de suppression en nous contactant à contact.dawky@gmail.com.',
+    titre: '7. Droit de rétractation et garantie',
+    paragraphes: [
+      'Le Client dispose d\'un délai de 14 jours à compter de la réception pour exercer son droit de rétractation, sauf pour les denrées alimentaires ouvertes ou descellées, qui ne peuvent être retournées pour des raisons d\'hygiène.',
+      'Garantie taille et satisfaction : si un produit ne convient pas à la taille du chien, Dawky propose un échange ou un geste commercial. Il suffit de nous écrire depuis la page contact.',
     ],
   },
   {
-    title: 'Article 8 — Droit applicable',
-    paragraphs: [
-      'Les présentes CGV sont soumises au droit français. Tout litige relatif à leur interprétation ou à leur exécution sera soumis aux tribunaux compétents.',
+    titre: '8. Données personnelles',
+    paragraphes: ['Le traitement des données est décrit dans notre politique de confidentialité, accessible en bas de chaque page.'],
+  },
+  {
+    titre: '9. Litiges',
+    paragraphes: [
+      'Les présentes CGV sont soumises au droit français. En cas de litige, le Client peut recourir gratuitement à un médiateur de la consommation avant toute action en justice.',
     ],
   },
 ]
 </script>
-
-<style scoped>
-.legal-page { background: var(--cream); }
-.legal-block {
-  background: white;
-  border-radius: var(--radius-lg);
-  padding: var(--space-6);
-  margin-bottom: var(--space-4);
-  border: 2px solid var(--border);
-}
-.legal-block h2 {
-  font-family: var(--font-display);
-  font-size: 1.125rem;
-  font-weight: 700;
-  margin-bottom: var(--space-3);
-  color: var(--blue);
-}
-.legal-block p { color: var(--ink-soft); line-height: 1.7; margin-bottom: var(--space-3); }
-.legal-block p:last-child { margin-bottom: 0; }
-</style>

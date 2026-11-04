@@ -1,644 +1,344 @@
+<!-- pages/admin/index.vue — Box du mois (US-17, US-18, US-27)
+     Construction des 3 box, validation (contrôle allergènes + stock),
+     expédition, puis clôture du mois. -->
 <template>
-  <div class="admin-page">
-
-    <!-- Header admin -->
-    <div class="admin-header">
-      <div class="container admin-header-inner">
-        <div class="admin-logo-row">
-          <img :src="images.logo_dawky_blanc" alt="Dawky" class="admin-logo" />
-          <span class="admin-badge">⚙️ Admin</span>
-        </div>
-        <div class="admin-user">
-          <span class="text-white text-sm">{{ profile?.prenom }} {{ profile?.nom }}</span>
-          <button class="btn btn-white btn-sm" @click="signOut">Déconnexion</button>
-        </div>
+  <div class="a-page">
+    <div class="a-entete">
+      <div>
+        <h1 class="a-titre">Box de {{ moisLisible(mois).toLowerCase() }}</h1>
+        <p class="petit texte-secondaire">
+          Expédition le 1er {{ moisLisible(mois, true).toLowerCase() }}. <strong>{{ LIBELLE_STATUT[statutMois] }}</strong>
+        </p>
+      </div>
+      <div class="a-actions">
+        <label class="sr-only" for="mois">Mois</label>
+        <input id="mois" v-model="mois" class="input a-select" type="month" />
+        <button v-if="statutMois === 'EXPEDIEE'" type="button" class="btn btn-secondaire a-btn-petit" :disabled="envoi" @click="cloture = true">Clôturer le mois</button>
+        <button v-if="statutMois === 'VALIDEE'" type="button" class="btn btn-principal a-btn-petit" :disabled="envoi" @click="expedition = true">Lancer l'expédition</button>
+        <button v-if="statutMois === 'BROUILLON'" type="button" class="btn btn-principal a-btn-petit" :disabled="envoi" @click="valider(false)">Valider les 3 box</button>
       </div>
     </div>
 
-    <div class="admin-layout">
-      <!-- Sidebar -->
-      <aside class="admin-sidebar">
-        <nav class="admin-nav">
-          <button
-            v-for="tab in tabs"
-            :key="tab.key"
-            class="admin-nav-item"
-            :class="{ active: activeTab === tab.key }"
-            @click="activeTab = tab.key"
-          >
-            <span class="admin-nav-icon">{{ tab.icon }}</span>
-            <span>{{ tab.label }}</span>
-            <span v-if="tab.badge" class="admin-nav-badge">{{ tab.badge }}</span>
-          </button>
-        </nav>
-      </aside>
-
-      <!-- Main -->
-      <main class="admin-main">
-
-        <!-- ═══ OVERVIEW ═════════════════════════════ -->
-        <div v-if="activeTab === 'overview'" class="admin-section animate-fade-in-up">
-          <h2 class="admin-section-title">Tableau de bord</h2>
-          <div class="kpi-grid">
-            <div v-for="kpi in kpis" :key="kpi.label" class="kpi-card">
-              <div class="kpi-icon">{{ kpi.icon }}</div>
-              <div class="kpi-value">{{ kpi.value }}</div>
-              <div class="kpi-label">{{ kpi.label }}</div>
-            </div>
-          </div>
-
-          <!-- Actions rapides -->
-          <h3 class="admin-subtitle">Actions rapides</h3>
-          <div class="quick-actions">
-            <button class="quick-action" @click="activeTab = 'boxes'">
-              <span>📦</span> <span>Gérer les box du mois</span>
-            </button>
-            <button class="quick-action" @click="activeTab = 'produits'">
-              <span>🛒</span> <span>Ajouter un produit</span>
-            </button>
-            <button class="quick-action" @click="activeTab = 'commandes'">
-              <span>📋</span> <span>Voir les commandes</span>
-            </button>
-            <button class="quick-action" @click="activeTab = 'invendus'">
-              <span>🏷️</span> <span>Gérer les invendus</span>
-            </button>
-          </div>
-        </div>
-
-        <!-- ═══ BOX MENSUELLES ════════════════════════ -->
-        <div v-if="activeTab === 'boxes'" class="admin-section animate-fade-in-up">
-          <div class="admin-section-header">
-            <h2 class="admin-section-title">📦 Box Mensuelles</h2>
-            <button class="btn btn-primary btn-sm" @click="openCreateBox = true">+ Créer une box</button>
-          </div>
-
-          <!-- Filtre mois -->
-          <div class="admin-filters">
-            <input v-model="filterMois" type="month" class="form-input admin-filter-input" />
-          </div>
-
-          <!-- Loading -->
-          <div v-if="boxesLoading" class="admin-loading">Chargement…</div>
-
-          <!-- Boxes grid -->
-          <div v-else class="boxes-admin-grid">
-            <div v-for="box in boxesMensuelles" :key="box.id" class="box-admin-card">
-              <div class="box-admin-header">
-                <div class="box-admin-taille">{{ box.taille }}</div>
-                <span class="badge" :class="statutBoxColor[box.statut]">{{ statutBoxLabel[box.statut] }}</span>
-              </div>
-              <div class="box-admin-mois">{{ formatMois(box.mois) }}</div>
-              <div v-if="box.theme" class="box-admin-theme">🎨 {{ box.theme }}</div>
-              <div class="box-admin-items">
-                <span v-for="item in box.items?.slice(0, 3)" :key="item.id" class="box-item-chip">
-                  {{ item.produit?.emoji }} {{ item.produit?.nom }}
-                </span>
-                <span v-if="(box.items?.length ?? 0) > 3" class="box-item-more">+{{ box.items.length - 3 }}</span>
-              </div>
-              <div class="box-admin-actions">
-                <button
-                  v-if="box.statut === 'BROUILLON'"
-                  class="btn btn-primary btn-sm"
-                  @click="validerBox(box.id)"
-                >
-                  ✅ Valider
-                </button>
-                <button
-                  v-if="box.statut === 'VALIDEE'"
-                  class="btn btn-yellow btn-sm"
-                  @click="cloturerBox(box.id)"
-                >
-                  🔒 Clôturer
-                </button>
-              </div>
-            </div>
-            <div v-if="boxesMensuelles.length === 0" class="admin-empty">
-              Aucune box pour ce mois. <button class="link-btn" @click="openCreateBox = true">En créer une ?</button>
-            </div>
-          </div>
-        </div>
-
-        <!-- ═══ PRODUITS ═══════════════════════════════ -->
-        <div v-if="activeTab === 'produits'" class="admin-section animate-fade-in-up">
-          <div class="admin-section-header">
-            <h2 class="admin-section-title">🛒 Produits</h2>
-            <button class="btn btn-primary btn-sm" @click="openProduitForm = !openProduitForm">
-              {{ openProduitForm ? 'Annuler' : '+ Ajouter' }}
-            </button>
-          </div>
-
-          <!-- Formulaire ajout -->
-          <div v-if="openProduitForm" class="admin-form-panel animate-fade-in-up">
-            <h3 class="admin-subtitle">{{ editProduit ? 'Modifier le produit' : 'Nouveau produit' }}</h3>
-            <div class="admin-form-grid">
-              <div class="form-group">
-                <label class="form-label">Nom *</label>
-                <input v-model="produitForm.nom" type="text" class="form-input" placeholder="Ex: Bois de cerf taille S" />
-              </div>
-              <div class="form-group">
-                <label class="form-label">Emoji</label>
-                <input v-model="produitForm.emoji" type="text" class="form-input" placeholder="🦌" maxlength="4" />
-              </div>
-              <div class="form-group" style="grid-column:1/-1">
-                <label class="form-label">Description *</label>
-                <textarea v-model="produitForm.description" class="form-textarea" rows="2" placeholder="Description du produit…" />
-              </div>
-              <div class="form-group">
-                <label class="form-label">Catégorie *</label>
-                <select v-model="produitForm.categorie" class="form-select">
-                  <option value="">— Choisir —</option>
-                  <option v-for="c in categoriesAdmin" :key="c.value" :value="c.value">{{ c.icon }} {{ c.label }}</option>
-                </select>
-              </div>
-              <div class="form-group">
-                <label class="form-label">Stock initial</label>
-                <input v-model.number="produitForm.stock" type="number" class="form-input" min="0" placeholder="0" />
-              </div>
-              <div class="form-group" style="grid-column:1/-1">
-                <label class="form-label">Tailles disponibles</label>
-                <div class="taille-checkboxes">
-                  <label v-for="t in ['XS','S','M','L']" :key="t" class="taille-check-label">
-                    <input type="checkbox" :value="t" v-model="produitForm.tailles" />
-                    {{ t }}
-                  </label>
-                </div>
-              </div>
-            </div>
-            <div class="admin-form-actions">
-              <button class="btn btn-primary" :disabled="produitLoading" @click="saveProduit">
-                {{ produitLoading ? 'Sauvegarde…' : editProduit ? '💾 Modifier' : '✅ Ajouter le produit' }}
-              </button>
-              <button class="btn btn-ghost" @click="resetProduitForm">Annuler</button>
-            </div>
-          </div>
-
-          <!-- Table produits -->
-          <div class="admin-table-wrap">
-            <table class="admin-table">
-              <thead>
-                <tr>
-                  <th>Produit</th>
-                  <th>Catégorie</th>
-                  <th>Tailles</th>
-                  <th>Stock</th>
-                  <th>Statut</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr v-for="p in produitsAdmin" :key="p.id">
-                  <td class="produit-cell">
-                    <span class="produit-cell-emoji">{{ p.emoji }}</span>
-                    <div>
-                      <p class="font-semibold">{{ p.nom }}</p>
-                      <p class="text-xs text-muted produit-desc-trunc">{{ p.description }}</p>
-                    </div>
-                  </td>
-                  <td>
-                    <span class="badge" :class="catColors[p.categorie]">{{ catLabels[p.categorie] }}</span>
-                  </td>
-                  <td>
-                    <div class="taille-chips">
-                      <span v-for="t in p.tailles" :key="t.taille" class="size-chip size-chip-sm">{{ t.taille }}</span>
-                    </div>
-                  </td>
-                  <td>
-                    <span :class="p.stock < 5 ? 'text-rose font-semibold' : ''">{{ p.stock }}</span>
-                  </td>
-                  <td>
-                    <span class="badge" :class="p.actif ? 'badge-green' : 'badge-rose'">{{ p.actif ? 'Actif' : 'Inactif' }}</span>
-                  </td>
-                  <td>
-                    <div class="row-actions">
-                      <button class="btn btn-ghost btn-sm" @click="startEditProduit(p)">✏️</button>
-                      <button class="btn btn-ghost btn-sm" @click="deleteProduit(p.id)">🗑️</button>
-                    </div>
-                  </td>
-                </tr>
-                <tr v-if="produitsAdmin.length === 0">
-                  <td colspan="6" class="admin-empty">Aucun produit.</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        <!-- ═══ COMMANDES ═══════════════════════════════ -->
-        <div v-if="activeTab === 'commandes'" class="admin-section animate-fade-in-up">
-          <h2 class="admin-section-title">📋 Commandes</h2>
-          <div class="admin-table-wrap">
-            <table class="admin-table">
-              <thead>
-                <tr>
-                  <th>Ref</th>
-                  <th>Client</th>
-                  <th>Formule</th>
-                  <th>Taille</th>
-                  <th>Total</th>
-                  <th>Statut</th>
-                  <th>Date</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr v-for="c in commandesAdmin" :key="c.id">
-                  <td class="font-mono text-sm">#{{ c.id.slice(-8).toUpperCase() }}</td>
-                  <td>
-                    <div>
-                      <p class="font-semibold text-sm">{{ c.client?.prenom }} {{ c.client?.nom }}</p>
-                      <p class="text-xs text-muted">{{ c.client?.email }}</p>
-                    </div>
-                  </td>
-                  <td class="text-sm">{{ c.formula?.nom }}</td>
-                  <td><span class="size-chip">{{ c.taille }}</span></td>
-                  <td class="font-semibold">{{ c.total?.toFixed(2) }}&nbsp;€</td>
-                  <td><span class="badge" :class="statutColor[c.statut]">{{ statutLabel[c.statut] }}</span></td>
-                  <td class="text-sm text-muted">{{ formatDate(c.createdAt) }}</td>
-                </tr>
-                <tr v-if="commandesAdmin.length === 0">
-                  <td colspan="7" class="admin-empty">Aucune commande.</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        <!-- ═══ INVENDUS ══════════════════════════════ -->
-        <div v-if="activeTab === 'invendus'" class="admin-section animate-fade-in-up">
-          <h2 class="admin-section-title">🏷️ Invendus (Box À la Carte)</h2>
-          <p class="text-soft mb-5">Ces produits sont issus des box Surprise non expédiées et sont proposés dans la Box À la Carte.</p>
-          <div class="admin-table-wrap">
-            <table class="admin-table">
-              <thead>
-                <tr><th>Produit</th><th>Catégorie</th><th>Mois d'origine</th><th>Stock restant</th></tr>
-              </thead>
-              <tbody>
-                <tr v-for="p in invendus" :key="p.id">
-                  <td class="produit-cell">
-                    <span class="produit-cell-emoji">{{ p.emoji }}</span>
-                    <span class="font-semibold">{{ p.nom }}</span>
-                  </td>
-                  <td><span class="badge badge-rose">{{ catLabels[p.categorie] }}</span></td>
-                  <td class="text-sm">{{ formatMois(p.moisOrigine) }}</td>
-                  <td><span :class="p.stock < 3 ? 'text-rose font-semibold' : ''">{{ p.stock }}</span></td>
-                </tr>
-                <tr v-if="invendus.length === 0"><td colspan="4" class="admin-empty">Aucun invendu.</td></tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-      </main>
+    <!-- Contrôle avant validation (US-27) -->
+    <div v-if="avertissements" class="a-alerte" role="alert">
+      <template v-if="avertissements.conflitsAllergie.length">
+        <p><strong>Contrôle allergènes :</strong> {{ avertissements.conflitsAllergie.length }} abonné(s) recevraient un de leurs allergènes.</p>
+        <ul>
+          <li v-for="c in avertissements.conflitsAllergie" :key="c.email">
+            {{ c.client }} ({{ c.chien }}, taille {{ c.taille }}) : {{ c.produits.map(p => `${p.produit} (${p.allergenes.join(', ')})`).join(' ; ') }}
+          </li>
+        </ul>
+      </template>
+      <template v-if="avertissements.profilsNonValides.length">
+        <p><strong>Profils allergiques non validés :</strong></p>
+        <ul><li v-for="p in avertissements.profilsNonValides" :key="p.client + p.chien">{{ p.client }} ({{ p.chien }}, taille {{ p.taille }})</li></ul>
+      </template>
+      <template v-if="avertissements.ruptures.length">
+        <p><strong>Stock insuffisant :</strong></p>
+        <ul><li v-for="r in avertissements.ruptures" :key="r.produit">{{ r.produit }} : {{ r.stock }} en stock pour {{ r.besoin }} nécessaires</li></ul>
+      </template>
+      <div class="a-actions">
+        <button type="button" class="btn btn-principal a-btn-petit" :disabled="envoi" @click="valider(true)">Valider quand même</button>
+        <button type="button" class="lien" @click="avertissements = null">Corriger les box</button>
+      </div>
     </div>
+
+    <p v-if="!donnees" class="a-vide">Chargement…</p>
+    <div v-else class="colonnes">
+      <section v-for="col in colonnes" :key="col.taille" class="colonne">
+        <div class="colonne-entete">
+          <span class="lettre">{{ col.taille }}</span>
+          <span class="petit">{{ donnees.destinataires[col.taille] }} abonné{{ donnees.destinataires[col.taille] > 1 ? 's' : '' }}</span>
+        </div>
+        <div class="champ">
+          <label :for="`theme-${col.taille}`">Thème du mois</label>
+          <input :id="`theme-${col.taille}`" v-model="col.theme" class="input" :disabled="!col.modifiable" placeholder="Ex. Hiver douillet" @input="col.modifie = true" />
+        </div>
+        <ul class="items">
+          <li v-for="(it, i) in col.items" :key="it.produitId" class="item">
+            <div>
+              <p class="item-nom">{{ it.nom }}</p>
+              <p class="petit texte-secondaire">
+                {{ LIBELLES_CATEGORIE[it.categorie] }} · stock {{ it.stockCourant }}
+                <span v-if="it.stockCourant < donnees.destinataires[col.taille] * it.quantite" class="manque">(insuffisant)</span>
+              </p>
+            </div>
+            <button v-if="col.modifiable" type="button" class="retirer" :aria-label="`Retirer ${it.nom}`" @click="col.items.splice(i, 1); col.modifie = true">
+              <Icone nom="fermer" :taille="16" />
+            </button>
+          </li>
+        </ul>
+        <button v-if="col.modifiable" type="button" class="btn btn-secondaire btn-bloc a-btn-petit" @click="ouvrirSelecteur(col.taille)">Ajouter un produit</button>
+        <p class="petit texte-secondaire">{{ col.items.length }} produit{{ col.items.length > 1 ? 's' : '' }} sur {{ nbProduitsBox }}</p>
+        <button
+          v-if="col.modifiable" type="button" class="btn btn-noir btn-bloc a-btn-petit"
+          :disabled="envoi || !col.items.length" @click="enregistrer(col)"
+        >{{ col.id && !col.modifie ? 'Brouillon enregistré' : 'Enregistrer le brouillon' }}</button>
+        <span v-else class="a-statut">{{ LIBELLE_STATUT[col.statut] }}</span>
+      </section>
+    </div>
+
+    <!-- Sélecteur de produits (pépites des mois passés en tête) -->
+    <ModaleDawky :ouverte="!!selecteurTaille" :titre="`Ajouter à la box ${selecteurTaille}`" @fermer="selecteurTaille = null">
+      <div class="a-filtres">
+        <button type="button" class="a-filtre" :aria-pressed="!filtreCategorie" @click="filtreCategorie = null">Tous</button>
+        <button
+          v-for="(l, c) in LIBELLES_CATEGORIE" :key="c" type="button" class="a-filtre"
+          :aria-pressed="filtreCategorie === c" @click="filtreCategorie = c"
+        >{{ l }}</button>
+      </div>
+      <ul class="selecteur">
+        <li v-for="p in produitsProposes" :key="p.id">
+          <button type="button" class="selecteur-produit" @click="ajouter(p)">
+            <span>{{ p.emoji }} {{ p.nom }}</span>
+            <span class="petit texte-secondaire">
+              {{ LIBELLES_CATEGORIE[p.categorie] }} · stock {{ p.stockCourant }}<template v-if="p.stockInvendu"> · <strong>{{ p.stockInvendu }} des mois passés</strong></template>
+            </span>
+          </button>
+        </li>
+        <li v-if="!produitsProposes.length" class="a-vide">Aucun produit actif disponible dans cette taille.</li>
+      </ul>
+    </ModaleDawky>
+
+    <ModaleDawky :ouverte="expedition" titre="Lancer l'expédition" @fermer="expedition = false">
+      <p>
+        Une commande sera créée pour chaque abonné et chaque cadeau en cours ({{ totalDestinataires }} box), et le stock
+        des produits sera décrémenté. Les box passent ensuite dans l'onglet Expéditions.
+      </p>
+      <button type="button" class="btn btn-principal btn-bloc" :disabled="envoi" @click="expedier">Confirmer l'expédition</button>
+    </ModaleDawky>
+
+    <ModaleDawky :ouverte="cloture" titre="Clôturer le mois" @fermer="cloture = false">
+      <p>
+        Le stock restant des produits de ces box devient disponible dans Compose ta box (produits restants de
+        {{ moisLisible(mois, true).toLowerCase() }}). Cette action est définitive.
+      </p>
+      <button type="button" class="btn btn-principal btn-bloc" :disabled="envoi" @click="cloturer">Clôturer définitivement</button>
+    </ModaleDawky>
   </div>
 </template>
 
 <script setup lang="ts">
-import { dawkyImages } from '~/composables/useDawkyImages'
-const images = dawkyImages
+import type { Categorie, Taille } from '~/composables/types'
 
-definePageMeta({ layout: false })
+definePageMeta({ layout: 'admin', middleware: 'admin' })
+useSeoMeta({ title: 'Box du mois — Back-office Dawky', robots: 'noindex' })
 
-const { profile, signOut, isAdmin } = useAuth()
-watch(isAdmin, (v) => { if (!v) navigateTo('/') }, { immediate: true })
-
-const activeTab = ref('overview')
-
-const tabs = [
-  { key: 'overview',  icon: '📊', label: 'Vue d\'ensemble' },
-  { key: 'boxes',     icon: '📦', label: 'Box mensuelles' },
-  { key: 'produits',  icon: '🛒', label: 'Produits' },
-  { key: 'commandes', icon: '📋', label: 'Commandes' },
-  { key: 'invendus',  icon: '🏷️', label: 'Invendus' },
-]
-
-// ── KPIs
-const kpis = ref([
-  { icon: '📦', value: '—', label: 'Box ce mois' },
-  { icon: '🛍️', value: '—', label: 'Commandes totales' },
-  { icon: '🐾', value: '—', label: 'Abonnés actifs' },
-  { icon: '🏷️', value: '—', label: 'Invendus' },
-])
-
-// ── BOX MENSUELLES
-const filterMois = ref(new Date().toISOString().slice(0, 7))
-const boxesLoading = ref(false)
-const boxesMensuelles = ref<any[]>([])
-const openCreateBox = ref(false)
-
-async function fetchBoxes() {
-  boxesLoading.value = true
-  try {
-    const data = await $fetch('/api/admin/boxes-mensuelles', { query: { mois: filterMois.value } })
-    boxesMensuelles.value = (data as any).data ?? []
-  } finally { boxesLoading.value = false }
+type Statut = 'BROUILLON' | 'VALIDEE' | 'EXPEDIEE' | 'CLOTUREE'
+const LIBELLE_STATUT: Record<Statut | 'VIDE', string> = {
+  VIDE: 'Rien d\'enregistré pour ce mois.',
+  BROUILLON: 'Brouillon',
+  VALIDEE: 'Validées, prêtes à expédier',
+  EXPEDIEE: 'Expédiées',
+  CLOTUREE: 'Mois clôturé',
 }
 
-watch(filterMois, fetchBoxes, { immediate: true })
-
-async function validerBox(id: string) {
-  await $fetch('/api/admin/boxes-mensuelles/valider', { method: 'POST', body: { id } })
-  fetchBoxes()
-}
-async function cloturerBox(id: string) {
-  await $fetch('/api/admin/boxes-mensuelles/cloturer', { method: 'POST', body: { id } })
-  fetchBoxes()
+interface ItemBox { produitId: string; nom: string; categorie: Categorie; quantite: number; stockCourant: number }
+interface Colonne { taille: Taille; id?: string; theme: string; statut: Statut; modifiable: boolean; modifie: boolean; items: ItemBox[] }
+interface ProduitAdmin { id: string; nom: string; emoji: string; categorie: Categorie; actif: boolean; tailles: Taille[]; stockCourant: number; stockInvendu: number }
+interface Avertissements {
+  conflitsAllergie: Array<{ client: string; email: string; chien: string; taille: string; produits: Array<{ produit: string; allergenes: string[] }> }>
+  profilsNonValides: Array<{ client: string; chien: string; taille: string }>
+  ruptures: Array<{ produit: string; besoin: number; stock: number }>
 }
 
-// ── PRODUITS
-const produitsAdmin = ref<any[]>([])
-const openProduitForm = ref(false)
-const produitLoading = ref(false)
-const editProduit = ref<any>(null)
-const produitForm = reactive({ nom: '', emoji: '📦', description: '', categorie: '', stock: 0, tailles: [] as string[] })
+const { envoi, executer } = useActionAdmin()
+const mois = ref(moisProchain())
+const nbProduitsBox = 5
+const donnees = ref<{ destinataires: Record<Taille, number>; boxes: Array<{ id: string; taille: Taille; theme: string | null; statut: Statut; items: Array<{ produitId: string; quantite: number; stockCourant: number; produit: { nom: string; emoji: string; categorie: Categorie } }> }> } | null>(null)
+const colonnes = ref<Colonne[]>([])
+const produits = ref<ProduitAdmin[]>([])
+const avertissements = ref<Avertissements | null>(null)
+const selecteurTaille = ref<Taille | null>(null)
+const filtreCategorie = ref<Categorie | null>(null)
+const expedition = ref(false)
+const cloture = ref(false)
 
-async function fetchProduits() {
-  const data = await $fetch('/api/admin/produits')
-  produitsAdmin.value = (data as any).data?.produits ?? []
-}
+const statutMois = computed<Statut | 'VIDE'>(() => {
+  const statuts = donnees.value?.boxes.map(b => b.statut) ?? []
+  if (!statuts.length) return 'VIDE'
+  if (statuts.includes('BROUILLON') || statuts.length < 3) return 'BROUILLON'
+  return statuts[0]!
+})
+const totalDestinataires = computed(() => Object.values(donnees.value?.destinataires ?? {}).reduce((s, n) => s + n, 0))
 
-watch(() => activeTab.value === 'produits', (v) => { if (v) fetchProduits() }, { immediate: true })
-
-async function saveProduit() {
-  produitLoading.value = true
-  try {
-    if (editProduit.value) {
-      await $fetch(`/api/admin/produits/${editProduit.value.id}`, { method: 'PUT', body: produitForm })
-    } else {
-      await $fetch('/api/admin/produits', { method: 'POST', body: produitForm })
+async function charger() {
+  avertissements.value = null
+  const [d, p] = await Promise.all([
+    executer(() => api<NonNullable<typeof donnees.value>>('/api/admin/boxes-mensuelles', { query: { mois: mois.value } })),
+    produits.value.length ? Promise.resolve(produits.value) : executer(() => api<ProduitAdmin[]>('/api/admin/produits', { query: { actif: 'true' } })),
+  ])
+  if (p) produits.value = p
+  if (!d) return
+  donnees.value = d
+  colonnes.value = (['S', 'M', 'L'] as const).map((taille) => {
+    const box = d.boxes.find(b => b.taille === taille)
+    return {
+      taille,
+      id: box?.id,
+      theme: box?.theme ?? '',
+      statut: box?.statut ?? 'BROUILLON',
+      modifiable: !box || box.statut === 'BROUILLON',
+      modifie: false,
+      items: (box?.items ?? []).map(i => ({
+        produitId: i.produitId, nom: i.produit.nom, categorie: i.produit.categorie, quantite: i.quantite, stockCourant: i.stockCourant,
+      })),
     }
-    resetProduitForm()
-    fetchProduits()
-  } finally { produitLoading.value = false }
+  })
+}
+watch(mois, charger, { immediate: true })
+
+const produitsProposes = computed(() => {
+  const col = colonnes.value.find(c => c.taille === selecteurTaille.value)
+  const deja = new Set(col?.items.map(i => i.produitId))
+  return produits.value
+    .filter(p => p.actif && p.tailles.includes(selecteurTaille.value!) && !deja.has(p.id))
+    .filter(p => !filtreCategorie.value || p.categorie === filtreCategorie.value)
+    .sort((a, b) => (b.stockInvendu > 0 ? 1 : 0) - (a.stockInvendu > 0 ? 1 : 0) || a.nom.localeCompare(b.nom))
+})
+
+function ouvrirSelecteur(t: Taille) {
+  filtreCategorie.value = null
+  selecteurTaille.value = t
 }
 
-function startEditProduit(p: any) {
-  editProduit.value = p
-  Object.assign(produitForm, { nom: p.nom, emoji: p.emoji, description: p.description, categorie: p.categorie, stock: p.stock, tailles: p.tailles?.map((t: any) => t.taille) ?? [] })
-  openProduitForm.value = true
+function ajouter(p: ProduitAdmin) {
+  const col = colonnes.value.find(c => c.taille === selecteurTaille.value)
+  if (!col) return
+  col.items.push({ produitId: p.id, nom: p.nom, categorie: p.categorie, quantite: 1, stockCourant: p.stockCourant })
+  col.modifie = true
+  if (col.items.length >= nbProduitsBox) selecteurTaille.value = null
 }
 
-function resetProduitForm() {
-  editProduit.value = null
-  openProduitForm.value = false
-  Object.assign(produitForm, { nom: '', emoji: '📦', description: '', categorie: '', stock: 0, tailles: [] })
+async function enregistrer(col: Colonne) {
+  const ok = await executer(() => api('/api/admin/boxes-mensuelles', {
+    method: 'POST',
+    body: {
+      mois: mois.value,
+      taille: col.taille,
+      theme: col.theme || null,
+      items: col.items.map(i => ({ produitId: i.produitId, quantite: i.quantite })),
+    },
+  }), `Box ${col.taille} enregistrée en brouillon`)
+  if (ok) await charger()
 }
 
-async function deleteProduit(id: string) {
-  if (!confirm('Supprimer ce produit ?')) return
-  await $fetch(`/api/admin/produits/${id}`, { method: 'DELETE' })
-  fetchProduits()
+async function valider(forcer: boolean) {
+  if (colonnes.value.some(c => c.modifie)) {
+    useToast().error('Enregistrez d\'abord les box modifiées.')
+    return
+  }
+  envoi.value = true
+  try {
+    await api('/api/admin/boxes-mensuelles/valider', { method: 'POST', body: { mois: mois.value, forcer } })
+    useToast().success('Les 3 box sont validées et verrouillées')
+    await charger()
+  } catch (err) {
+    const e = versApiError(err)
+    if (e.statusCode === 409 && e.details) avertissements.value = e.details as unknown as Avertissements
+    else useToast().error(e.message)
+  } finally {
+    envoi.value = false
+  }
 }
 
-// ── COMMANDES
-const commandesAdmin = ref<any[]>([])
-watch(() => activeTab.value === 'commandes', async (v) => {
-  if (!v) return
-  const data = await $fetch('/api/admin/commandes')
-  commandesAdmin.value = (data as any).data ?? []
-}, { immediate: true })
-
-// ── INVENDUS
-const invendus = ref<any[]>([])
-watch(() => activeTab.value === 'invendus', async (v) => {
-  if (!v) return
-  const data = await $fetch('/api/admin/invendus')
-  invendus.value = (data as any).data ?? []
-}, { immediate: true })
-
-// ── Helpers
-function formatDate(d: string) {
-  return new Date(d).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' })
-}
-function formatMois(m: string) {
-  if (!m) return '—'
-  const [y, mo] = m.split('-')
-  return new Date(+y, +mo - 1, 1).toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' })
+async function expedier() {
+  const r = await executer(() => api<{ commandesCreees: number; abonnementsSansAdresse: string[]; stockManquant: unknown[] }>(
+    '/api/admin/boxes-mensuelles/expedier', { method: 'POST', body: { mois: mois.value } }))
+  expedition.value = false
+  if (!r) return
+  const toast = useToast()
+  toast.success(`${r.commandesCreees} box à préparer : voir l'onglet Expéditions`)
+  if (r.abonnementsSansAdresse.length) toast.error(`${r.abonnementsSansAdresse.length} abonnement(s) sans adresse n'ont pas été expédiés`)
+  if (r.stockManquant.length) toast.error('Stock insuffisant pour certains produits : vérifiez l\'onglet Produits')
+  await charger()
 }
 
-const categoriesAdmin = [
-  { value: 'MASTICATION', icon: '🦌', label: 'Mastication' },
-  { value: 'NUTRITION',   icon: '🍖', label: 'Nutrition' },
-  { value: 'JOUET',       icon: '🎾', label: 'Jouet' },
-  { value: 'SOIN',        icon: '🌿', label: 'Soin' },
-  { value: 'ACCESSOIRE',  icon: '🎀', label: 'Accessoire' },
-]
-const catColors: Record<string,string> = { MASTICATION:'badge-blue', NUTRITION:'badge-green', JOUET:'badge-yellow', SOIN:'badge-rose', ACCESSOIRE:'badge-blue' }
-const catLabels: Record<string,string> = { MASTICATION:'Mastication', NUTRITION:'Nutrition', JOUET:'Jouet', SOIN:'Soin', ACCESSOIRE:'Accessoire' }
-
-const statutBoxColor: Record<string,string> = { BROUILLON:'badge-yellow', VALIDEE:'badge-blue', EXPEDIEE:'badge-green', CLOTUREE:'badge-rose' }
-const statutBoxLabel: Record<string,string> = { BROUILLON:'Brouillon', VALIDEE:'Validée', EXPEDIEE:'Expédiée', CLOTUREE:'Clôturée' }
-const statutColor: Record<string,string> = { EN_ATTENTE:'badge-yellow', CONFIRMEE:'badge-blue', PREPAREE:'badge-blue', EXPEDIEE:'badge-green', LIVREE:'badge-green', ANNULEE:'badge-rose' }
-const statutLabel: Record<string,string> = { EN_ATTENTE:'En attente', CONFIRMEE:'Confirmée', PREPAREE:'Préparée', EXPEDIEE:'Expédiée', LIVREE:'Livrée', ANNULEE:'Annulée' }
+async function cloturer() {
+  const r = await executer(() => api('/api/admin/boxes-mensuelles/cloturer', { method: 'POST', body: { mois: mois.value, confirmation: true } }), 'Mois clôturé : les produits restants sont dans Compose ta box')
+  cloture.value = false
+  if (r) await navigateTo('/admin/invendus')
+}
 </script>
 
 <style scoped>
-.admin-page { min-height: 100vh; background: #F4F6FA; display: flex; flex-direction: column; }
-
-.admin-header {
-  background: var(--ink);
-  padding: var(--space-3) 0;
-  border-bottom: 2px solid rgba(255,255,255,0.05);
-  position: sticky; top: 0; z-index: 200;
+.colonnes {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--e2);
 }
-.admin-header-inner {
+.colonne {
+  border: 1px solid var(--noir);
+  padding: var(--e2);
   display: flex;
-  align-items: center;
+  flex-direction: column;
+  gap: 12px;
+}
+.colonne-entete {
+  display: flex;
   justify-content: space-between;
+  align-items: baseline;
 }
-.admin-logo-row { display: flex; align-items: center; gap: var(--space-3); }
-.admin-logo { height: 28px; }
-.admin-badge {
-  background: rgba(255,255,255,0.1); color: white;
-  font-size: 0.75rem; font-weight: 700; padding: 4px 12px;
-  border-radius: var(--radius-pill);
+.lettre {
+  font-family: var(--font-titre);
+  font-size: 40px;
+  line-height: 1;
 }
-.admin-user { display: flex; align-items: center; gap: var(--space-3); }
-
-/* Layout */
-.admin-layout {
+.items {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.item {
   display: flex;
-  flex: 1;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--e1);
+  padding-block: 10px;
+  border-bottom: 1px solid var(--filet);
 }
-
-/* Sidebar */
-.admin-sidebar {
-  width: 240px;
-  flex-shrink: 0;
-  background: white;
-  border-right: 1px solid #E5E7EB;
-  padding: var(--space-5) var(--space-3);
-  position: sticky;
-  top: 56px;
-  height: calc(100vh - 56px);
+.item-nom {
+  font-weight: 700;
+  font-size: 15px;
+}
+.manque {
+  color: var(--erreur);
+  font-weight: 700;
+}
+.retirer {
+  border: 0;
+  background: none;
+  cursor: pointer;
+  min-width: 32px;
+  min-height: 32px;
+}
+.selecteur {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  max-height: 50vh;
   overflow-y: auto;
 }
-.admin-nav { display: flex; flex-direction: column; gap: 2px; }
-.admin-nav-item {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-  padding: 10px 14px;
-  border-radius: var(--radius-md);
-  font-family: var(--font-body);
-  font-size: 0.9375rem;
-  font-weight: 500;
-  color: var(--ink-soft);
-  cursor: pointer;
-  border: none;
-  background: transparent;
-  text-align: left;
-  transition: all var(--duration-fast);
+.selecteur-produit {
   width: 100%;
-}
-.admin-nav-item:hover { background: rgba(4,172,227,0.06); color: var(--blue); }
-.admin-nav-item.active { background: rgba(4,172,227,0.1); color: var(--blue); font-weight: 600; }
-.admin-nav-icon { font-size: 1.125rem; }
-.admin-nav-badge {
-  margin-left: auto;
-  background: var(--blue); color: white;
-  font-size: 0.7rem; font-weight: 700;
-  padding: 2px 8px; border-radius: var(--radius-pill);
-}
-
-/* Main */
-.admin-main { flex: 1; padding: var(--space-6); overflow-x: hidden; }
-
-.admin-section { display: flex; flex-direction: column; gap: var(--space-5); }
-.admin-section-header { display: flex; align-items: center; justify-content: space-between; }
-.admin-section-title { font-family: var(--font-display); font-size: 1.5rem; font-weight: 700; }
-.admin-subtitle { font-family: var(--font-display); font-size: 1.125rem; font-weight: 700; color: var(--ink-soft); }
-
-/* KPIs */
-.kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--space-4); }
-.kpi-card {
-  background: white;
-  border-radius: var(--radius-lg);
-  padding: var(--space-5);
-  border: 1px solid #E5E7EB;
+  text-align: left;
+  background: none;
+  border: 0;
+  border-bottom: 1px solid var(--filet);
+  padding: 12px 4px;
   display: flex;
   flex-direction: column;
-  gap: var(--space-2);
-}
-.kpi-icon { font-size: 1.75rem; }
-.kpi-value { font-family: var(--font-display); font-size: 2.5rem; font-weight: 900; color: var(--ink); line-height: 1; }
-.kpi-label { font-size: 0.8125rem; color: var(--ink-muted); font-weight: 500; text-transform: uppercase; letter-spacing: 0.04em; }
-
-/* Quick actions */
-.quick-actions { display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--space-3); }
-.quick-action {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-  padding: var(--space-4) var(--space-5);
-  background: white;
-  border: 1px solid #E5E7EB;
-  border-radius: var(--radius-lg);
-  font-family: var(--font-body);
-  font-size: 0.9375rem;
-  font-weight: 600;
+  gap: 2px;
   cursor: pointer;
-  transition: all var(--duration-fast);
+  font-size: 15px;
 }
-.quick-action:hover { border-color: var(--blue); background: rgba(4,172,227,0.04); color: var(--blue); }
-.quick-action span:first-child { font-size: 1.5rem; }
-
-/* Filters */
-.admin-filters { display: flex; gap: var(--space-3); align-items: center; }
-.admin-filter-input { max-width: 200px; }
-
-/* Boxes admin */
-.boxes-admin-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--space-4); }
-.box-admin-card {
-  background: white;
-  border-radius: var(--radius-lg);
-  padding: var(--space-5);
-  border: 1px solid #E5E7EB;
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
-}
-.box-admin-header { display: flex; align-items: center; justify-content: space-between; }
-.box-admin-taille { font-family: var(--font-display); font-size: 2rem; font-weight: 900; color: var(--blue); }
-.box-admin-mois { font-weight: 600; text-transform: capitalize; }
-.box-admin-theme { font-size: 0.875rem; color: var(--ink-soft); }
-.box-admin-items { display: flex; flex-wrap: wrap; gap: 4px; }
-.box-item-chip {
-  font-size: 0.75rem;
-  background: rgba(4,172,227,0.08);
-  color: var(--blue);
-  padding: 2px 8px;
-  border-radius: var(--radius-pill);
-}
-.box-item-more { font-size: 0.75rem; color: var(--ink-muted); }
-.box-admin-actions { display: flex; gap: var(--space-2); }
-
-/* Admin form */
-.admin-form-panel {
-  background: var(--cream);
-  border: 2px solid var(--border);
-  border-radius: var(--radius-xl);
-  padding: var(--space-6);
-}
-.admin-form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-4); }
-.admin-form-actions { display: flex; gap: var(--space-3); margin-top: var(--space-4); }
-
-.taille-checkboxes { display: flex; gap: var(--space-4); }
-.taille-check-label { display: flex; align-items: center; gap: var(--space-2); cursor: pointer; font-weight: 600; }
-.taille-check-label input { accent-color: var(--blue); width: 16px; height: 16px; }
-
-/* Table */
-.admin-table-wrap { overflow-x: auto; }
-.admin-table {
-  width: 100%;
-  border-collapse: collapse;
-  background: white;
-  border-radius: var(--radius-lg);
-  overflow: hidden;
-  border: 1px solid #E5E7EB;
-}
-.admin-table th {
-  text-align: left;
-  padding: 12px 16px;
-  font-size: 0.75rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: var(--ink-muted);
-  background: #F9FAFB;
-  border-bottom: 1px solid #E5E7EB;
-}
-.admin-table td { padding: 14px 16px; border-bottom: 1px solid #F3F4F6; vertical-align: middle; }
-.admin-table tr:last-child td { border-bottom: none; }
-.admin-table tr:hover td { background: #FAFBFD; }
-
-.produit-cell { display: flex; align-items: center; gap: var(--space-3); }
-.produit-cell-emoji { font-size: 1.75rem; flex-shrink: 0; }
-.produit-desc-trunc {
-  max-width: 200px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.taille-chips { display: flex; gap: 4px; flex-wrap: wrap; }
-.row-actions { display: flex; gap: 4px; }
-
-.admin-empty { text-align: center; padding: var(--space-7); color: var(--ink-muted); }
-.link-btn { background: none; border: none; cursor: pointer; color: var(--blue); font-weight: 600; text-decoration: underline; }
-.font-mono { font-family: monospace; }
-.text-rose { color: #E54747; }
-
-.admin-loading { text-align: center; padding: var(--space-7); color: var(--ink-muted); }
-
-@media (max-width: 1024px) {
-  .kpi-grid, .quick-actions { grid-template-columns: repeat(2, 1fr); }
-  .boxes-admin-grid { grid-template-columns: repeat(2, 1fr); }
+.selecteur-produit:hover {
+  background: var(--fond-gris);
 }
 
-@media (max-width: 768px) {
-  .admin-sidebar { display: none; }
-  .kpi-grid, .quick-actions { grid-template-columns: 1fr 1fr; }
-  .boxes-admin-grid { grid-template-columns: 1fr; }
-  .admin-form-grid { grid-template-columns: 1fr; }
-  .admin-form-grid [style*="grid-column"] { grid-column: 1 / -1; }
+@media (max-width: 1100px) {
+  .colonnes {
+    grid-template-columns: 1fr;
+  }
 }
 </style>

@@ -1,107 +1,45 @@
 // composables/useApi.ts
 // ─────────────────────────────────────────
-// Types et helpers API Dawky
+// Appels à l'API Dawky. Les réponses sont de la forme
+// { success, message, data } : `api()` renvoie directement `data`.
+// Les erreurs deviennent des `ApiError` avec un message en français
+// prêt à afficher (et le détail par champ pour les formulaires).
 // ─────────────────────────────────────────
 
-export interface ApiResponse<T> {
-  success: boolean
-  message: string
-  data: T
+export class ApiError extends Error {
+  constructor(
+    message: string,
+    public statusCode: number,
+    public details?: Record<string, unknown>,
+  ) {
+    super(message)
+  }
 }
 
-export interface ProduitTaille {
-  taille: 'XS' | 'S' | 'M' | 'L'
+type Options = Parameters<typeof $fetch>[1]
+
+export async function api<T>(url: string, options?: Options): Promise<T> {
+  try {
+    const res = await $fetch<{ data: T }>(url, options)
+    return res.data
+  } catch (err) {
+    throw versApiError(err)
+  }
 }
 
-export interface Produit {
-  id: string
-  nom: string
-  description: string
-  emoji: string
-  categorie: 'MASTICATION' | 'NUTRITION' | 'JOUET' | 'SOIN' | 'ACCESSOIRE'
-  tailles: ProduitTaille[]
-  stock: number
-  estInvendu?: boolean
+export function versApiError(err: unknown): ApiError {
+  if (err instanceof ApiError) return err
+  const e = err as { statusCode?: number; data?: { statusMessage?: string; message?: string; data?: Record<string, unknown> } }
+  const statusCode = e.statusCode ?? 0
+  const message = e.data?.statusMessage || e.data?.message
+    || (statusCode === 0 ? 'Connexion impossible. Vérifiez votre réseau.' : 'Une erreur est survenue. Réessayez dans un instant.')
+  return new ApiError(message, statusCode, e.data?.data)
 }
 
-// FormulaBox n'a plus de champ taille depuis le refactoring "prix unique"
-export interface FormulaBox {
-  id: string
-  nom: string
-  description: string
-  type: 'SURPRISE' | 'CARTE'
-  prix: number
-  slots: number
-  actif: boolean
-}
-
-export interface Pagination {
-  total: number
-  page: number
-  limit: number
-  totalPages: number
-}
-
-// ─── Produits ───
-export function useProduits(params?: Ref<Record<string, string | undefined>>) {
-  return useFetch<ApiResponse<{ produits: Produit[]; pagination: Pagination }>>(
-    '/api/produits',
-    {
-      query: params,
-      default: () => ({
-        success: false, message: '',
-        data: { produits: [], pagination: { total: 0, page: 1, limit: 20, totalPages: 0 } },
-      }),
-    },
-  )
-}
-
-export function useProduit(id: string) {
-  return useFetch<ApiResponse<Produit>>(`/api/produits/${id}`)
-}
-
-// ─── Boxes ───
-export function useBoxes(params?: Ref<Record<string, string | undefined>>) {
-  return useFetch<ApiResponse<FormulaBox[]>>('/api/boxes', {
-    query: params,
-    default: () => ({ success: false, message: '', data: [] }),
-  })
-}
-
-export function useBox(id: string) {
-  return useFetch<ApiResponse<FormulaBox>>(`/api/boxes/${id}`)
-}
-
-// ─── Abonnement (Box Surprise uniquement — récurrent mensuel) ───
-export async function submitAbonnement(payload: {
-  prenom: string; nom: string; email: string; telephone?: string
-  adresse: string; ville: string; codePostal: string; pays?: string
-  taille: 'XS' | 'S' | 'M' | 'L'; clientId?: string
-}) {
-  return $fetch<ApiResponse<{ abonnement: object; formula: object }>>('/api/abonnements', {
-    method: 'POST',
-    body: payload,
-  })
-}
-
-// ─── Commande ponctuelle (Box À la Carte — achat unique) ───
-export async function submitCommande(payload: {
-  prenom: string; nom: string; email: string; telephone?: string
-  adresse: string; ville: string; codePostal: string; pays?: string
-  taille: 'XS' | 'S' | 'M' | 'L'
-  selectionProduitIds: string[]
-  clientId?: string
-}) {
-  return $fetch<ApiResponse<{ commande: object }>>('/api/commandes', {
-    method: 'POST',
-    body: payload,
-  })
-}
-
-// ─── Contact ───
-export async function submitContact(payload: Record<string, unknown>) {
-  return $fetch<ApiResponse<{ id: string }>>('/api/contact', {
-    method: 'POST',
-    body: payload,
-  })
+/**
+ * Message de la 1re erreur de validation d'un champ (ou undefined).
+ */
+export function erreurChamp(err: ApiError | null, champ: string): string | undefined {
+  const valeur = err?.details?.[champ]
+  return Array.isArray(valeur) ? String(valeur[0]) : undefined
 }

@@ -1,43 +1,33 @@
 // server/api/admin/produits/[id].put.ts
-import { z } from 'zod'
-import { createError } from 'h3'
+// Modification d'un produit (le stock se gère par lots : /api/admin/lots)
 import prisma from '~/server/utils/prisma'
-import { apiSuccess, parseBody, withErrorHandling } from '~/server/utils/api'
+import { requireAdmin } from '~/server/utils/auth'
+import { apiSuccess, parseBody, requireParam, withErrorHandling } from '~/server/utils/api'
+import { adminProduitInclude, allergenesDepuisCodes, produitChampsSchema, verifierComposition } from '~/server/utils/admin-produits'
 
-const bodySchema = z.object({
-  nom:         z.string().min(2).optional(),
-  description: z.string().min(5).optional(),
-  emoji:       z.string().optional(),
-  categorie:   z.enum(['MASTICATION', 'NUTRITION', 'JOUET', 'SOIN', 'ACCESSOIRE']).optional(),
-  tailles:     z.array(z.enum(['XS', 'S', 'M', 'L'])).min(1).optional(),
-  stock:       z.number().int().min(0).optional(),
-  estInvendu:  z.boolean().optional(),
-  actif:       z.boolean().optional(),
-})
+const bodySchema = produitChampsSchema.extend({
+  emoji:      produitChampsSchema.shape.emoji.removeDefault(),
+  allergenes: produitChampsSchema.shape.allergenes.removeDefault(),
+  actif:      produitChampsSchema.shape.actif.removeDefault(),
+}).partial()
 
 export default defineEventHandler(async (event) => {
   return withErrorHandling(async () => {
-    const id = getRouterParam(event, 'id')
-    if (!id) throw createError({ statusCode: 400, statusMessage: 'ID manquant' })
+    await requireAdmin(event)
+    const id = requireParam(event, 'id')
+    const { tailles, allergenes, ...data } = await parseBody(event, bodySchema)
 
-    const body = await parseBody(event, bodySchema)
-    const { tailles, ...rest } = body
+    const avant = await prisma.produit.findUniqueOrThrow({ where: { id } })
+    verifierComposition(data.categorie ?? avant.categorie, data.ingredients !== undefined ? data.ingredients : avant.ingredients)
 
     const produit = await prisma.produit.update({
       where: { id },
       data: {
-        ...rest,
-        // Si tailles fourni, on remplace entièrement
-        ...(tailles
-          ? {
-              tailles: {
-                deleteMany: {},
-                create: tailles.map((taille) => ({ taille })),
-              },
-            }
-          : {}),
+        ...data,
+        ...(tailles ? { tailles: { deleteMany: {}, create: tailles.map(taille => ({ taille })) } } : {}),
+        ...(allergenes ? { allergenes: { deleteMany: {}, create: await allergenesDepuisCodes(allergenes) } } : {}),
       },
-      include: { tailles: { select: { taille: true } } },
+      include: adminProduitInclude,
     })
 
     return apiSuccess(produit, 'Produit mis à jour')

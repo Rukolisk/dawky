@@ -11,9 +11,14 @@ import {
   parseQuery,
   withErrorHandling,
 } from "../../server/utils/api";
-import { requireAdmin } from "../../server/utils/adminGuard";
+import { requireAdmin } from "../../server/utils/auth";
 import prisma from "../../server/utils/prisma";
-import { mockEvent, mockAdminEvent, expectH3Error } from "../helpers";
+import {
+  mockEvent,
+  mockAdminEvent,
+  mockInvalidSupabaseToken,
+  expectH3Error,
+} from "../helper";
 import { z } from "zod";
 
 // ══════════════════════════════════════════════════════════════
@@ -221,10 +226,11 @@ describe("requireAdmin", () => {
     vi.clearAllMocks();
   });
 
-  it("retourne le client si uid valide et rôle ADMIN", async () => {
-    const event = mockAdminEvent();
+  it("retourne le client si le token est valide et le rôle ADMIN", async () => {
+    const event = mockAdminEvent(); // configure aussi supabaseAuthMock.getUser
     vi.mocked(prisma.client.findUnique).mockResolvedValue({
       id: "admin-001",
+      supabaseUid: "admin-uid-123",
       role: "ADMIN",
     } as any);
 
@@ -233,18 +239,27 @@ describe("requireAdmin", () => {
     expect(result.role).toBe("ADMIN");
   });
 
-  it("lance 401 si header x-supabase-uid absent", async () => {
+  it("lance 401 si le header Authorization est absent", async () => {
     const event = mockEvent({}); // pas de header
     vi.mocked(getHeader).mockReturnValue(undefined);
 
     await expectH3Error(() => requireAdmin(event), 401, "authentifié");
   });
 
-  it("lance 403 si client introuvable en base", async () => {
+  it("lance 401 si le token Supabase est invalide/expiré", async () => {
+    mockInvalidSupabaseToken();
+    const event = mockEvent({
+      headers: { authorization: "Bearer token-invalide" },
+    });
+    vi.mocked(getHeader).mockReturnValue("Bearer token-invalide");
+
+    await expectH3Error(() => requireAdmin(event), 401);
+  });
+
+  it("lance 404 si le token est valide mais aucun client ne correspond en base", async () => {
     const event = mockAdminEvent();
     vi.mocked(prisma.client.findUnique).mockResolvedValue(null);
-
-    await expectH3Error(() => requireAdmin(event), 403, "administrateurs");
+    await expectH3Error(() => requireAdmin(event), 404, "introuvable");
   });
 
   it("lance 403 si client a le rôle USER", async () => {
@@ -257,7 +272,7 @@ describe("requireAdmin", () => {
     await expectH3Error(() => requireAdmin(event), 403, "administrateurs");
   });
 
-  it("appelle findUnique avec le bon supabaseUid", async () => {
+  it("appelle findUnique avec le supabaseUid extrait du token vérifié", async () => {
     const event = mockAdminEvent();
     vi.mocked(prisma.client.findUnique).mockResolvedValue({
       id: "admin-001",
@@ -268,7 +283,6 @@ describe("requireAdmin", () => {
 
     expect(prisma.client.findUnique).toHaveBeenCalledWith({
       where: { supabaseUid: "admin-uid-123" },
-      select: { id: true, role: true },
     });
   });
 });

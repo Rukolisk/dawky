@@ -1,27 +1,34 @@
 // server/api/boxes/index.get.ts
-// GET /api/boxes?type=SURPRISE
-// FormulaBox n'a plus de champ taille (supprimé dans le nouveau schema)
-
-import { z } from 'zod'
+// Formules (Box Surprise, Compose ta box, saisonnières en vente) avec prix
+// par taille et contenu prévu par catégorie (F-36, US-06, US-07, US-53)
 import prisma from '~/server/utils/prisma'
-import { apiSuccess, parseQuery, withErrorHandling } from '~/server/utils/api'
+import { apiSuccess, withErrorHandling } from '~/server/utils/api'
+import { getReglages } from '~/server/utils/reglages'
+import { serialiserFormule } from '~/server/utils/formules'
 
-const querySchema = z.object({
-  type: z.enum(['SURPRISE', 'CARTE']).optional(),
-})
-
-export default defineEventHandler(async (event) => {
+export default defineEventHandler(async () => {
   return withErrorHandling(async () => {
-    const { type } = parseQuery(event, querySchema)
-
-    const boxes = await prisma.formulaBox.findMany({
+    const now = new Date()
+    const reglages = await getReglages()
+    const formules = await prisma.formulaBox.findMany({
       where: {
         actif: true,
-        ...(type ? { type } : {}),
+        OR: [
+          { type: { in: ['SURPRISE', 'COMPOSE'] } },
+          { type: 'SAISONNIERE', dateDebutVente: { lte: now }, OR: [{ dateFinVente: null }, { dateFinVente: { gte: now } }] },
+        ],
       },
-      orderBy: { type: 'asc' },
+      include: { prix: true },
+      orderBy: [{ type: 'asc' }, { createdAt: 'asc' }],
     })
 
-    return apiSuccess(boxes)
+    return apiSuccess({
+      formules: formules.map(serialiserFormule),
+      seuilsTaille: { S: reglages['taille.seuilS'], M: reglages['taille.seuilM'] },
+      fraisPort: reglages['livraison.fraisPort'],
+      fraisPortOffertDes: reglages['livraison.fraisPortOffertDes'],
+      dureesCadeau: reglages['cadeau.dureesMois'],
+      pauseMaxMois: reglages['abonnement.pauseMaxMois'],
+    })
   })
 })

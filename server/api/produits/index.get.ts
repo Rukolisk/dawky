@@ -1,65 +1,46 @@
 // server/api/produits/index.get.ts
-// GET /api/produits?categorie=JOUET&taille=M&page=1&limit=20
-//
-// Par défaut : retourne les produits du catalogue normal (estInvendu = false)
-// Avec ?invendus=true : retourne uniquement les invendus (pour Box À la Carte)
-
+// Catalogue public (US-13)
+// GET /api/produits?categorie=JOUET&taille=M&sansAllergenes=poulet,boeuf&traces=true&page=1
 import { z } from 'zod'
 import prisma from '~/server/utils/prisma'
-import { apiSuccess, parseQuery, withErrorHandling } from '~/server/utils/api'
+import { apiSuccess, parseQuery, queryBool, queryList, withErrorHandling } from '~/server/utils/api'
+import { categorieSchema, tailleSchema } from '~/server/utils/schemas'
+import { filtreSansAllergenes, produitInclude, serialiserProduit } from '~/server/utils/produits'
 
 const querySchema = z.object({
-  categorie: z
-    .enum(['MASTICATION', 'NUTRITION', 'JOUET', 'SOIN', 'ACCESSOIRE'])
-    .optional(),
-  taille:    z.enum(['XS', 'S', 'M', 'L']).optional(),
-  // false (défaut) = catalogue normal | true = invendus disponibles en À la Carte
-  invendus:  z.coerce.boolean().default(false),
-  page:      z.coerce.number().min(1).default(1),
-  limit:     z.coerce.number().min(1).max(50).default(20),
+  categorie:      categorieSchema.optional(),
+  taille:         tailleSchema.optional(),
+  sansAllergenes: queryList.optional(),
+  traces:         queryBool.default('false'),
+  page:           z.coerce.number().int().min(1).default(1),
+  limit:          z.coerce.number().int().min(1).max(50).default(20),
 })
 
 export default defineEventHandler(async (event) => {
   return withErrorHandling(async () => {
-    const { categorie, taille, invendus, page, limit } = parseQuery(event, querySchema)
+    const q = parseQuery(event, querySchema)
 
     const where = {
-      actif:      true,
-      // Catalogue normal : exclure les invendus
-      // Catalogue À la Carte avec invendus : inclure seulement les invendus
-      estInvendu: invendus ? true : false,
-      // Stock > 0 pour les invendus (sinon inutile de les proposer)
-      ...(invendus ? { stock: { gt: 0 } } : {}),
-      ...(categorie ? { categorie } : {}),
-      ...(taille ? { tailles: { some: { taille } } } : {}),
+      actif: true,
+      ...(q.categorie ? { categorie: q.categorie } : {}),
+      ...(q.taille ? { tailles: { some: { taille: q.taille } } } : {}),
+      ...(await filtreSansAllergenes(q.sansAllergenes ?? [], q.traces)),
     }
 
     const [total, produits] = await Promise.all([
       prisma.produit.count({ where }),
       prisma.produit.findMany({
         where,
-        orderBy: invendus
-          ? [{ moisOrigine: 'desc' }, { nom: 'asc' }]
-          : [{ categorie: 'asc' }, { nom: 'asc' }],
-        skip: (page - 1) * limit,
-        take: limit,
-        select: {
-          id: true,
-          nom: true,
-          description: true,
-          emoji: true,
-          categorie: true,
-          stock: true,
-          estInvendu: true,
-          moisOrigine: true,
-          tailles: { select: { taille: true } },
-        },
+        include: produitInclude,
+        orderBy: [{ categorie: 'asc' }, { nom: 'asc' }],
+        skip: (q.page - 1) * q.limit,
+        take: q.limit,
       }),
     ])
 
     return apiSuccess({
-      produits,
-      pagination: { total, page, limit, totalPages: Math.ceil(total / limit) },
+      produits: produits.map(serialiserProduit),
+      pagination: { total, page: q.page, limit: q.limit, totalPages: Math.ceil(total / q.limit) },
     })
   })
 })

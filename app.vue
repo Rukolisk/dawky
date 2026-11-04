@@ -1,12 +1,7 @@
 <template>
-  <div>
-    <NuxtLayout>
-      <NuxtPage />
-    </NuxtLayout>
-  </div>
+  <NuxtLayout>
+    <NuxtPage />
+  </NuxtLayout>
+  <ToastZone />
+  <BandeauCookies />
 </template>
-
-<script setup lang="ts">
-const { init } = useAuth()
-onMounted(() => init())
-</script>

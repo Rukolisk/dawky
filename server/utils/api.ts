@@ -2,9 +2,8 @@
 // ─────────────────────────────────────────
 // Helpers partagés pour les routes API
 // ─────────────────────────────────────────
-
-import { H3Event, createError } from 'h3'
-import { ZodSchema, ZodError } from 'zod'
+import { H3Event, createError, readBody, getQuery, getRouterParam } from 'h3'
+import { z, ZodError, type ZodTypeAny } from 'zod'
 
 /**
  * Réponse de succès normalisée
@@ -21,7 +20,7 @@ export function apiSuccess<T>(data: T, message?: string) {
  * Parse et valide le body avec un schéma Zod.
  * Lance une H3Error 400 si invalide.
  */
-export async function parseBody<T>(event: H3Event, schema: ZodSchema<T>): Promise<T> {
+export async function parseBody<S extends ZodTypeAny>(event: H3Event, schema: S): Promise<z.output<S>> {
   const body = await readBody(event)
   try {
     return schema.parse(body)
@@ -40,7 +39,7 @@ export async function parseBody<T>(event: H3Event, schema: ZodSchema<T>): Promis
 /**
  * Parse les query params avec un schéma Zod.
  */
-export function parseQuery<T>(event: H3Event, schema: ZodSchema<T>): T {
+export function parseQuery<S extends ZodTypeAny>(event: H3Event, schema: S): z.output<S> {
   const query = getQuery(event)
   try {
     return schema.parse(query)
@@ -55,6 +54,31 @@ export function parseQuery<T>(event: H3Event, schema: ZodSchema<T>): T {
     throw err
   }
 }
+
+/**
+ * Paramètre de route obligatoire (ex: :id). 400 s'il est absent.
+ */
+export function requireParam(event: H3Event, name: string): string {
+  const value = getRouterParam(event, name)
+  if (!value) throw createError({ statusCode: 400, statusMessage: `Paramètre "${name}" manquant` })
+  return value
+}
+
+/**
+ * Booléen de query string. `z.coerce.boolean()` transforme "false" en true
+ * (toute chaîne non vide est truthy), on accepte donc explicitement
+ * "true"/"1" et "false"/"0".
+ */
+export const queryBool = z
+  .union([z.boolean(), z.enum(['true', 'false', '1', '0'])])
+  .transform(v => v === true || v === 'true' || v === '1')
+
+/**
+ * Liste séparée par des virgules dans la query string ("poulet,boeuf").
+ */
+export const queryList = z
+  .string()
+  .transform(v => v.split(',').map(s => s.trim()).filter(Boolean))
 
 /**
  * Wrapper pour capturer les erreurs Prisma / inconnues
@@ -74,6 +98,9 @@ export async function withErrorHandling<T>(fn: () => Promise<T>): Promise<T> {
       }
       if (prismaErr.code === 'P2025') {
         throw createError({ statusCode: 404, statusMessage: 'Enregistrement introuvable.' })
+      }
+      if (prismaErr.code === 'P2003') {
+        throw createError({ statusCode: 400, statusMessage: 'Référence invalide : un élément lié est introuvable.' })
       }
     }
 

@@ -1,153 +1,114 @@
-<!-- components/ui/AdresseAutocomplete.vue -->
-<!-- Autocomplétion d'adresse via api-adresse.data.gouv.fr -->
+<!-- components/ui/AdresseAutocomplete.vue
+     Saisie assistée d'adresse (API adresse.data.gouv.fr via /api/geo/adresse).
+     Le choix d'une suggestion remplit aussi le code postal et la ville. -->
 <template>
-  <div class="addr-wrap" ref="wrapRef">
+  <div class="auto" @keydown="clavier">
     <input
-      v-bind="$attrs"
-      :value="modelValue"
+      :id="id"
+      v-model="saisie"
+      class="input"
       type="text"
-      class="form-input"
-      :placeholder="placeholder"
-      autocomplete="off"
-      @input="onInput"
-      @focus="open = suggestions.length > 0"
-      @keydown.down.prevent="moveDown"
-      @keydown.up.prevent="moveUp"
-      @keydown.enter.prevent="selectActive"
-      @keydown.escape="open = false"
+      role="combobox"
+      autocomplete="address-line1"
+      placeholder="Commencez à saisir, on complète pour vous"
+      :aria-expanded="ouvert"
+      :aria-controls="`${id}-liste`"
+      :aria-activedescendant="actif >= 0 ? `${id}-opt-${actif}` : undefined"
+      aria-autocomplete="list"
+      @input="chercher"
+      @blur="fermerPlusTard"
     />
-    <div v-if="loading" class="addr-spinner">⏳</div>
-
-    <Transition name="addr-drop">
-      <ul v-if="open && suggestions.length" class="addr-dropdown">
-        <li
-          v-for="(s, i) in suggestions"
-          :key="s.label"
-          :class="['addr-option', { 'addr-option--active': i === activeIdx }]"
-          @mousedown.prevent="select(s)"
-        >
-          <span class="addr-option__icon">{{ typeIcon(s.type) }}</span>
-          <div>
-            <span class="addr-option__label">{{ s.label }}</span>
-            <span class="addr-option__sub">{{ s.codePostal }} {{ s.ville }}</span>
-          </div>
-        </li>
-      </ul>
-    </Transition>
+    <ul v-show="ouvert" :id="`${id}-liste`" class="auto-liste" role="listbox">
+      <li
+        v-for="(s, i) in suggestions" :id="`${id}-opt-${i}`" :key="s.label"
+        role="option" :aria-selected="i === actif" class="auto-option" :class="{ actif: i === actif }"
+        @mousedown.prevent="choisir(s)"
+      >{{ s.label }}</li>
+    </ul>
   </div>
 </template>
 
 <script setup lang="ts">
-interface Suggestion {
-  label: string; nom: string; codePostal: string
-  ville: string; citycode: string; type: string
-}
+interface Suggestion { label: string; nom: string; codePostal: string; ville: string }
 
-const props = withDefaults(defineProps<{
-  modelValue: string
-  placeholder?: string
-  type?: 'housenumber' | 'street' | 'locality' | 'municipality'
-}>(), {
-  placeholder: 'Commencez à taper votre adresse…',
-  type: 'housenumber',
-})
-
+const props = defineProps<{ modelValue: string; id: string }>()
 const emit = defineEmits<{
-  'update:modelValue': [value: string]
-  'select': [suggestion: Suggestion]
+  'update:modelValue': [string]
+  choisir: [{ ligne1: string; codePostal: string; ville: string }]
 }>()
 
+const saisie = computed({ get: () => props.modelValue, set: v => emit('update:modelValue', v) })
 const suggestions = ref<Suggestion[]>([])
-const open       = ref(false)
-const loading    = ref(false)
-const activeIdx  = ref(-1)
-const wrapRef    = ref<HTMLElement | null>(null)
+const ouvert = ref(false)
+const actif = ref(-1)
 
-let debounceTimer: ReturnType<typeof setTimeout> | null = null
+const chercher = useDebounceFn(async () => {
+  if (saisie.value.trim().length < 4) {
+    ouvert.value = false
+    return
+  }
+  try {
+    suggestions.value = await $fetch<Suggestion[]>('/api/geo/adresse', {
+      query: { q: saisie.value, type: 'housenumber', limit: 5 },
+    })
+  } catch {
+    // Service indisponible : la saisie manuelle reste possible
+    suggestions.value = []
+  }
+  ouvert.value = suggestions.value.length > 0
+  actif.value = -1
+}, 280)
 
-async function onInput(e: Event) {
-  const val = (e.target as HTMLInputElement).value
-  emit('update:modelValue', val)
-  activeIdx.value = -1
-
-  if (debounceTimer) clearTimeout(debounceTimer)
-  if (val.length < 3) { suggestions.value = []; open.value = false; return }
-
-  debounceTimer = setTimeout(async () => {
-    loading.value = true
-    try {
-      const params: Record<string, string> = { q: val, limit: '6' }
-      if (props.type) params.type = props.type
-      const res = await $fetch<Suggestion[]>('/api/geo/adresse', { params })
-      suggestions.value = res
-      open.value = res.length > 0
-    } catch { suggestions.value = [] }
-    finally { loading.value = false }
-  }, 280)
+function choisir(s: Suggestion) {
+  emit('update:modelValue', s.nom)
+  emit('choisir', { ligne1: s.nom, codePostal: s.codePostal, ville: s.ville })
+  ouvert.value = false
 }
 
-function select(s: Suggestion) {
-  emit('update:modelValue', s.label)
-  emit('select', s)
-  open.value = false
-  suggestions.value = []
+function fermerPlusTard() {
+  setTimeout(() => { ouvert.value = false }, 100)
 }
 
-function moveDown() {
-  if (!open.value) return
-  activeIdx.value = Math.min(activeIdx.value + 1, suggestions.value.length - 1)
+function clavier(e: KeyboardEvent) {
+  if (!ouvert.value) return
+  if (e.key === 'ArrowDown') {
+    e.preventDefault()
+    actif.value = (actif.value + 1) % suggestions.value.length
+  } else if (e.key === 'ArrowUp') {
+    e.preventDefault()
+    actif.value = actif.value <= 0 ? suggestions.value.length - 1 : actif.value - 1
+  } else if (e.key === 'Enter' && actif.value >= 0) {
+    e.preventDefault()
+    choisir(suggestions.value[actif.value]!)
+  } else if (e.key === 'Escape') {
+    ouvert.value = false
+  }
 }
-function moveUp() {
-  activeIdx.value = Math.max(activeIdx.value - 1, -1)
-}
-function selectActive() {
-  if (activeIdx.value >= 0) select(suggestions.value[activeIdx.value])
-}
-
-function typeIcon(type: string) {
-  if (type === 'housenumber') return '🏠'
-  if (type === 'street')      return '🛣️'
-  if (type === 'municipality') return '🏙️'
-  return '📍'
-}
-
-// Fermer si clic en dehors
-onMounted(() => {
-  document.addEventListener('click', (e) => {
-    if (wrapRef.value && !wrapRef.value.contains(e.target as Node)) {
-      open.value = false
-    }
-  })
-})
 </script>
 
 <style scoped>
-.addr-wrap { position: relative; }
-.addr-spinner {
-  position: absolute; right: .8rem; top: 50%; transform: translateY(-50%);
-  font-size: .9rem; pointer-events: none;
+.auto { position: relative; }
+.auto-liste {
+  position: absolute;
+  z-index: 10;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  margin: 0;
+  padding: 4px 0;
+  list-style: none;
+  background: var(--blanc);
+  border: 1px solid var(--noir);
+  border-radius: var(--rayon-champ);
 }
-
-.addr-dropdown {
-  position: absolute; top: calc(100% + 4px); left: 0; right: 0;
-  background: white; border-radius: 14px;
-  border: 1.5px solid var(--brume);
-  box-shadow: var(--shadow-lg);
-  z-index: 200; list-style: none; overflow: hidden;
-  max-height: 300px; overflow-y: auto;
+.auto-option {
+  padding: 10px 16px;
+  font-size: 16px;
+  cursor: pointer;
+  min-height: var(--tactile);
+  display: flex;
+  align-items: center;
 }
-.addr-option {
-  display: flex; align-items: center; gap: .8rem;
-  padding: .75rem 1rem; cursor: pointer;
-  transition: background .15s; border-bottom: 1px solid var(--neige);
-}
-.addr-option:last-child { border: none; }
-.addr-option:hover,
-.addr-option--active { background: #FFF4E6; }
-.addr-option__icon { font-size: 1.1rem; flex-shrink: 0; }
-.addr-option__label { display: block; font-size: .9rem; font-weight: 500; color: var(--nuit); }
-.addr-option__sub   { font-size: .76rem; color: var(--muted); }
-
-.addr-drop-enter-active, .addr-drop-leave-active { transition: opacity .15s, transform .15s; }
-.addr-drop-enter-from, .addr-drop-leave-to { opacity: 0; transform: translateY(-4px); }
+.auto-option.actif,
+.auto-option:hover { background: var(--fond-gris); }
 </style>

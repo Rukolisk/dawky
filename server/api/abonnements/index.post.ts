@@ -1,53 +1,119 @@
 // server/api/abonnements/index.post.ts
+// Souscription à la Box Surprise pour un chien.
+// Crée l'abonnement en attente de paiement puis renvoie le clientSecret
+// de la session Stripe Checkout (formulaire intégré à la page) ; il devient ACTIF à la réception du webhook de paiement.
 import { z } from 'zod'
 import { createError } from 'h3'
 import prisma from '~/server/utils/prisma'
-import { sendAbonnementConfirmation } from '~/server/utils/email'
+import { requireAuth } from '~/server/utils/auth'
 import { apiSuccess, parseBody, withErrorHandling } from '~/server/utils/api'
+import { cgvSchema, livraisonSchema, tailleSchema } from '~/server/utils/schemas'
+import { getChienDuClient, notifierAllergieSiBesoin } from '~/server/utils/chiens'
+import { getAdresseDuClient } from '~/server/utils/livraison'
+import { resoudreReduction } from '~/server/utils/promo'
+import { creerSessionAbonnement, getStripe } from '~/server/utils/stripe'
 
 const bodySchema = z.object({
-  prenom: z.string().min(2), nom: z.string().min(2),
-  email: z.string().email(), telephone: z.string().optional(),
-  adresse: z.string().min(5), ville: z.string().min(2),
-  codePostal: z.string().min(4), pays: z.string().default('France'),
-  taille: z.enum(['XS', 'S', 'M', 'L']),
-  clientId: z.string().optional(),
+  chienId:    z.string().min(1),
+  // Par défaut : la taille de la fiche chien. Le client garde le dernier mot.
+  taille:     tailleSchema.optional(),
+  livraison:  livraisonSchema,
+  codePromo:  z.string().trim().max(30).optional(),
+  accepteCgv: cgvSchema,
 })
 
 export default defineEventHandler(async (event) => {
   return withErrorHandling(async () => {
+    const { client } = await requireAuth(event)
     const body = await parseBody(event, bodySchema)
 
-    const formula = await prisma.formulaBox.findFirst({ where: { type: 'SURPRISE', actif: true } })
-    if (!formula) throw createError({ statusCode: 404, statusMessage: 'Formule Surprise introuvable' })
+    const chien = await getChienDuClient(body.chienId, client.id)
+    if (!chien.consentementRgpdLe) {
+      throw createError({ statusCode: 400, statusMessage: 'La fiche de votre chien doit être complétée avant la souscription' })
+    }
+    await getAdresseDuClient(body.livraison.adresseId, client.id)
 
-    const client = await prisma.client.upsert({
-      where: { email: body.email },
-      update: { prenom: body.prenom, nom: body.nom, telephone: body.telephone, adresse: body.adresse, ville: body.ville, codePostal: body.codePostal, pays: body.pays },
-      create: { prenom: body.prenom, nom: body.nom, email: body.email, telephone: body.telephone, adresse: body.adresse, ville: body.ville, codePostal: body.codePostal, pays: body.pays, role: 'USER' },
+    // F-22 : un seul abonnement en cours par chien
+    const enCours = await prisma.abonnement.findFirst({
+      where: {
+        chienId: chien.id,
+        OR: [
+          { statut: { in: ['ACTIF', 'PAUSE', 'IMPAYE'] } },
+          { statut: 'RESILIE', dateFin: { gt: new Date() } },
+        ],
+      },
+    })
+    if (enCours) {
+      throw createError({
+        statusCode: 409,
+        statusMessage: `${chien.nom} a déjà un abonnement en cours. Vous pouvez le modifier depuis votre espace client.`,
+      })
+    }
+
+    const formula = await prisma.formulaBox.findFirst({
+      where: { type: 'SURPRISE', actif: true },
+      include: { prix: true },
+    })
+    const taille = body.taille ?? chien.taille
+    const prixMensuel = formula?.prix.find(p => p.taille === taille)?.prix
+    if (!formula || !prixMensuel) {
+      throw createError({ statusCode: 503, statusMessage: 'La Box Surprise n\'est pas disponible pour le moment' })
+    }
+
+    // Une souscription abandonnée précédemment pour ce chien est annulée
+    const enAttente = await prisma.abonnement.findMany({ where: { chienId: chien.id, statut: 'EN_ATTENTE_PAIEMENT' } })
+    for (const abo of enAttente) {
+      if (abo.stripeCheckoutId) {
+        await getStripe().checkout.sessions.expire(abo.stripeCheckoutId).catch(() => { /* déjà expirée */ })
+      }
+    }
+    await prisma.abonnement.updateMany({
+      where: { id: { in: enAttente.map(a => a.id) } },
+      data: { statut: 'ANNULE' },
     })
 
-    const existing = await prisma.abonnement.findFirst({ where: { clientId: client.id, statut: 'ACTIF' } })
-    if (existing) throw createError({ statusCode: 409, statusMessage: 'Vous avez déjà un abonnement actif. Gérez-le depuis votre profil.' })
-
-    const prochainePeriode = new Date()
-    prochainePeriode.setMonth(prochainePeriode.getMonth() + 1)
+    const reduction = await resoudreReduction(client, prixMensuel, body.codePromo)
 
     const abonnement = await prisma.abonnement.create({
-      data: { clientId: client.id, formulaId: formula.id, taille: body.taille, engagement: 12, prochainePeriode, statut: 'ACTIF' },
+      data: {
+        clientId:           client.id,
+        chienId:            chien.id,
+        formulaId:          formula.id,
+        adresseId:          body.livraison.adresseId,
+        modeLivraison:      body.livraison.modeLivraison,
+        pointRelaisId:      body.livraison.pointRelaisId,
+        pointRelaisLibelle: body.livraison.pointRelaisLibelle,
+        taille,
+        prixMensuel,
+        codePromoId:        reduction?.codePromoId,
+      },
     })
 
-    await prisma.commande.create({
-      data: { clientId: client.id, formulaId: formula.id, abonnementId: abonnement.id, taille: body.taille, total: formula.prix, adresseLivr: `${body.adresse}, ${body.codePostal} ${body.ville}, ${body.pays}`, statut: 'EN_ATTENTE' },
+    const session = await creerSessionAbonnement({
+      abonnementId:  abonnement.id,
+      client,
+      libelle:       `Box Surprise Dawky taille ${taille} — ${chien.nom}`,
+      prixMensuel,
+      remise:        reduction?.remise ?? 0,
+      libelleRemise: reduction?.libelle,
+      sourceRemise:  reduction?.source,
     })
+    await prisma.abonnement.update({ where: { id: abonnement.id }, data: { stripeCheckoutId: session.id } })
 
-    // Email de confirmation (non bloquant)
-    sendAbonnementConfirmation(body.email, body.prenom, body.taille, formula.prix)
-      .catch(err => console.error('[Email] Abonnement non envoyé :', err.message))
+    // L'équipe est prévenue dès la souscription pour avoir le temps de
+    // contacter le client avant la prochaine expédition.
+    await notifierAllergieSiBesoin(chien, client)
 
-    return apiSuccess(
-      { abonnement: { id: abonnement.id, taille: abonnement.taille, prochainePeriode }, formula: { nom: formula.nom, prix: formula.prix } },
-      `Abonnement Box Surprise créé ! Votre box taille ${body.taille} arrive bientôt 🐾`,
-    )
+    return apiSuccess({
+      abonnementId: abonnement.id,
+      clientSecret:  session.client_secret,
+      recapitulatif: {
+        chien: chien.nom,
+        taille,
+        prixMensuel,
+        remisePremierMois: reduction?.remise ?? 0,
+        libelleRemise: reduction?.libelle ?? null,
+      },
+    })
   })
 })

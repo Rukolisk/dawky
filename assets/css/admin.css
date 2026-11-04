@@ -1,0 +1,150 @@
+/* Back-office : styles communs aux pages /admin (classes préfixées a-) */
+.a-page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--e3);
+}
+.a-entete {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: var(--e3);
+  flex-wrap: wrap;
+}
+.a-titre {
+  font-family: var(--font-titre);
+  font-weight: 300;
+  font-size: 48px;
+  line-height: 1.1;
+}
+.a-sous-titre {
+  font-family: var(--font-texte);
+  font-size: 18px;
+  font-weight: 700;
+}
+.a-actions {
+  display: flex;
+  gap: var(--e1);
+  flex-wrap: wrap;
+  align-items: center;
+}
+.a-table-defilante {
+  overflow-x: auto;
+}
+.a-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 15px;
+}
+.a-table th {
+  text-align: left;
+  font-weight: 700;
+  padding: 10px 12px 10px 0;
+  border-bottom: 1px solid var(--noir);
+  white-space: nowrap;
+}
+.a-table td {
+  padding: 10px 12px 10px 0;
+  border-bottom: 1px solid var(--filet);
+  vertical-align: middle;
+}
+.a-table tr.selectionnee td {
+  background: var(--fond-gris);
+}
+.a-table tr.cliquable {
+  cursor: pointer;
+}
+.a-table tr.cliquable:hover td {
+  background: var(--fond-gris);
+}
+.a-input-court {
+  width: 90px;
+  min-height: 36px;
+  padding: 6px 10px;
+}
+.a-select {
+  min-height: 36px;
+  padding: 6px 10px;
+  width: auto;
+}
+.a-filtres {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--e1);
+  align-items: flex-end;
+}
+.a-filtre {
+  min-height: 36px;
+  padding: 6px 16px;
+  border-radius: 999px;
+  border: 1px solid var(--noir);
+  background: var(--blanc);
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+}
+.a-filtre[aria-pressed='true'] {
+  background: var(--burgundy);
+  border-color: var(--burgundy);
+  color: var(--blanc);
+}
+.a-encart {
+  background: var(--fond-gris);
+  padding: var(--e3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--e2);
+}
+.a-alerte {
+  border: 1px solid var(--burgundy);
+  color: var(--burgundy);
+  padding: 12px 16px;
+  font-size: 15px;
+}
+.a-alerte ul {
+  margin: 8px 0 0;
+  padding-left: 18px;
+}
+.a-statut {
+  display: inline-flex;
+  padding: 2px 10px;
+  border-radius: 999px;
+  background: var(--fond-gris);
+  font-size: 13px;
+  font-weight: 700;
+}
+.a-statut-fort {
+  background: var(--burgundy);
+  color: var(--blanc);
+}
+.a-vide {
+  color: var(--texte-secondaire);
+  padding-block: var(--e2);
+}
+.a-btn-petit {
+  min-height: 36px;
+  padding: 6px 16px;
+  font-size: 14px;
+}
+.a-formulaire {
+  display: flex;
+  flex-direction: column;
+  gap: var(--e2);
+}
+.a-ligne {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: var(--e2);
+}
+.a-case {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 15px;
+  cursor: pointer;
+}
+.a-case input {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--burgundy);
+}

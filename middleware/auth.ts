@@ -1,12 +1,9 @@
-// middleware/auth.ts
-// Protège les routes nécessitant une connexion
+// middleware/auth.ts — pages réservées aux clients connectés
+// (la session est restaurée avant la navigation par 02.auth.client.ts)
 export default defineNuxtRouteMiddleware((to) => {
-  const { isLoggedIn, authLoading } = useAuth()
-
-  // Attendre que l'auth soit initialisée
-  if (authLoading.value) return
-
+  if (import.meta.server) return
+  const { isLoggedIn } = useAuth()
   if (!isLoggedIn.value) {
-    return navigateTo(`/connexion?redirect=${encodeURIComponent(to.fullPath)}`)
+    return navigateTo({ path: '/connexion', query: { redirect: to.fullPath } })
   }
 })

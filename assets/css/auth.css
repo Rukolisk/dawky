@@ -1,0 +1,51 @@
+/* Pages connexion / inscription / mot de passe (layout « scinde »)
+   Classes préfixées par .auth pour ne pas déborder sur le reste du site */
+.auth {
+  display: flex;
+  flex-direction: column;
+  gap: var(--e3);
+  max-width: 400px;
+  margin-block: auto;
+  padding-block: var(--e5);
+}
+.auth h1 {
+  font-size: clamp(40px, 4.4vw, 64px);
+  margin-top: var(--e4);
+}
+.auth-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--e3);
+}
+.auth-form .champ .lien {
+  align-self: flex-start;
+}
+.auth .champs-ligne {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--e2);
+}
+.auth .aide-champ {
+  font-size: 14px;
+  color: var(--texte-secondaire);
+}
+.auth .case-simple {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  font-size: 15px;
+  cursor: pointer;
+}
+.auth .case-simple input {
+  width: 20px;
+  height: 20px;
+  margin-top: 2px;
+  accent-color: var(--burgundy);
+  flex-shrink: 0;
+}
+.auth .info {
+  background: var(--fond-gris);
+  border-left: 3px solid var(--burgundy);
+  padding: 12px 16px;
+  font-size: 15px;
+}

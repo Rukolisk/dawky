@@ -1,19 +1,15 @@
 // server/api/admin/produits/[id].delete.ts
-import { createError } from 'h3'
+// Désactivation sans suppression (F-57) : l'historique des box et
+// commandes qui contiennent ce produit reste intact.
 import prisma from '~/server/utils/prisma'
-import { apiSuccess, withErrorHandling } from '~/server/utils/api'
+import { requireAdmin } from '~/server/utils/auth'
+import { apiSuccess, requireParam, withErrorHandling } from '~/server/utils/api'
 
 export default defineEventHandler(async (event) => {
   return withErrorHandling(async () => {
-    const id = getRouterParam(event, 'id')
-    if (!id) throw createError({ statusCode: 400, statusMessage: 'ID manquant' })
-
-    // Soft delete : on désactive plutôt que de supprimer
-    const produit = await prisma.produit.update({
-      where: { id },
-      data: { actif: false },
-    })
-
+    await requireAdmin(event)
+    const id = requireParam(event, 'id')
+    const produit = await prisma.produit.update({ where: { id }, data: { actif: false } })
     return apiSuccess({ id: produit.id }, 'Produit désactivé')
   })
 })

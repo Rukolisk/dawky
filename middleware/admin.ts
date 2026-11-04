@@ -1,12 +1,9 @@
-// middleware/admin.ts
-// Protège les routes /admin
-export default defineNuxtRouteMiddleware(() => {
-  const { isAdmin, isLoggedIn } = useAuth()
-
+// middleware/admin.ts — back-office (le rôle est revérifié par l'API)
+export default defineNuxtRouteMiddleware((to) => {
+  if (import.meta.server) return
+  const { isLoggedIn, isAdmin } = useAuth()
   if (!isLoggedIn.value) {
-    return navigateTo('/connexion?redirect=/admin')
+    return navigateTo({ path: '/connexion', query: { redirect: to.fullPath } })
   }
-  if (!isAdmin.value) {
-    return navigateTo('/')
-  }
+  if (!isAdmin.value) return navigateTo('/mon-compte')
 })

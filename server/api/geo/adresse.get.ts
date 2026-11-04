@@ -3,6 +3,7 @@
 // GET /api/geo/adresse?q=12+rue+de+la+paix&limit=5
 
 import { z } from 'zod'
+import { createError } from 'h3'
 import { parseQuery, withErrorHandling } from '~/server/utils/api'
 
 const querySchema = z.object({
@@ -31,7 +32,10 @@ export default defineEventHandler(async (event) => {
         }
         geometry: { coordinates: [number, number] }
       }>
-    }>(`https://api-adresse.data.gouv.fr/search/?${params.toString()}`)
+    }>(`https://api-adresse.data.gouv.fr/search/?${params.toString()}`, { timeout: 4000 })
+      .catch(() => {
+        throw createError({ statusCode: 502, statusMessage: 'Service d\'adresses indisponible, saisissez votre adresse manuellement' })
+      })
 
     return res.features.map(f => ({
       label:      f.properties.label,

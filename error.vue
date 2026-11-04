@@ -1,50 +1,42 @@
+<!-- error.vue — pages introuvables et erreurs -->
 <template>
-  <div class="error-page">
-    <div class="container text-center error-inner">
-      <img :src="images.mascotte_5" alt="" class="error-mascot animate-float" />
-      <h1 class="display-xl error-code">{{ error?.statusCode }}</h1>
-      <h2 class="display-md mt-2 mb-4">
-        {{ error?.statusCode === 404 ? 'Page introuvable 🐾' : 'Oups, une erreur s\'est produite' }}
-      </h2>
-      <p class="text-lg text-soft mb-7">
-        {{ error?.statusCode === 404
-          ? 'Il semble que cette page s\'est enfuie comme un chien sans laisse…'
-          : error?.message || 'Quelque chose a mal tourné. Réessayez !' }}
-      </p>
-      <div class="error-actions">
-        <NuxtLink to="/" class="btn btn-primary btn-lg">🏠 Retour à l'accueil</NuxtLink>
-        <button class="btn btn-outline btn-lg" @click="handleError">Réessayer</button>
+  <NuxtLayout>
+    <section class="conteneur erreur">
+      <p class="surtitre">Erreur {{ error?.statusCode }}</p>
+      <h1 class="titre-2">{{ est404 ? 'Cette page s\'est fait la malle.' : 'Oups, quelque chose s\'est mal passé.' }}</h1>
+      <p>{{ est404 ? 'Elle n\'existe pas ou plus. Pas de panique, la box de votre chien vous attend toujours.' : 'Réessayez dans un instant. Si le problème persiste, écrivez-nous.' }}</p>
+      <div class="actions">
+        <button class="btn btn-principal btn-grand" @click="clearError({ redirect: '/' })">Retour à l'accueil</button>
+        <NuxtLink to="/aide" class="lien" @click="clearError()">Besoin d'aide&nbsp;?</NuxtLink>
       </div>
-    </div>
-  </div>
+    </section>
+  </NuxtLayout>
 </template>
 
 <script setup lang="ts">
-import { dawkyImages } from '~/composables/useDawkyImages'
-const images = dawkyImages
+import type { NuxtError } from '#app'
 
-const props = defineProps<{ error: { statusCode: number; message?: string } | null }>()
-const handleError = () => clearError({ redirect: '/' })
+const props = defineProps<{ error: NuxtError }>()
+const est404 = computed(() => props.error?.statusCode === 404)
+useSeoMeta({ title: () => (est404.value ? 'Page introuvable — Dawky' : 'Erreur — Dawky') })
 </script>
 
 <style scoped>
-.error-page {
-  min-height: 80vh;
+.erreur {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--e3);
+  padding-block: var(--e7);
+  min-height: 60vh;
+}
+.erreur h1 {
+  max-width: 900px;
+}
+.actions {
   display: flex;
   align-items: center;
-  justify-content: center;
-  background: var(--cream);
+  gap: var(--e3);
+  flex-wrap: wrap;
 }
-.error-inner { padding: var(--space-9) 0; }
-.error-mascot { width: 200px; margin: 0 auto var(--space-5); }
-.error-code {
-  font-family: var(--font-display);
-  font-size: clamp(6rem, 15vw, 12rem);
-  font-weight: 900;
-  color: var(--blue);
-  opacity: 0.15;
-  line-height: 1;
-  margin-bottom: -var(--space-5);
-}
-.error-actions { display: flex; gap: var(--space-3); justify-content: center; flex-wrap: wrap; }
 </style>

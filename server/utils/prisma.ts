@@ -4,7 +4,6 @@
 // L'adaptateur pg fournit la connexion au runtime Nuxt
 // ─────────────────────────────────────────
 
-import { Pool } from 'pg'
 import { PrismaPg } from '@prisma/adapter-pg'
 import prismaClientPkg from '@prisma/client'
 
@@ -25,12 +24,10 @@ function createPrismaClient(): PrismaClientType {
     )
   }
 
-  const pool = new Pool({
+  const adapter = new PrismaPg({
     connectionString,
     max: process.env.NODE_ENV === 'production' ? 10 : 2,
   })
-
-  const adapter = new PrismaPg(pool)
 
   return new PrismaClient({
     adapter,

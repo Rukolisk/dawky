@@ -1,36 +1,35 @@
 // server/api/auth/profile.get.ts
-import { createError } from 'h3'
+// Espace client : profil, adresses, chiens, abonnements, parrainage
 import prisma from '~/server/utils/prisma'
+import { requireAuth } from '~/server/utils/auth'
 import { apiSuccess, withErrorHandling } from '~/server/utils/api'
+import { chienInclude, serialiserChien } from '~/server/utils/chiens'
 
 export default defineEventHandler(async (event) => {
   return withErrorHandling(async () => {
-    const uid = getHeader(event, 'x-supabase-uid')
-    if (!uid) throw createError({ statusCode: 401, statusMessage: 'Non authentifié' })
+    const { client } = await requireAuth(event)
 
-    const client = await prisma.client.findUnique({
-      where: { supabaseUid: uid },
-      select: {
-        id: true,
-        // On retourne aussi supabaseUid pour que le client puisse le stocker
-        supabaseUid: true,
-        email: true,
-        prenom: true,
-        nom: true,
-        telephone: true,
-        adresse: true,
-        ville: true,
-        codePostal: true,
-        pays: true,
-        role: true,
-      },
+    const [adresses, chiens, abonnementsActifs] = await Promise.all([
+      prisma.adresse.findMany({ where: { clientId: client.id }, orderBy: [{ parDefaut: 'desc' }, { createdAt: 'asc' }] }),
+      prisma.chien.findMany({ where: { clientId: client.id, consentementRgpdLe: { not: null } }, include: chienInclude, orderBy: { createdAt: 'asc' } }),
+      prisma.abonnement.count({ where: { clientId: client.id, statut: { in: ['ACTIF', 'PAUSE', 'IMPAYE'] } } }),
+    ])
+
+    const adresseParDefaut = adresses.find(a => a.parDefaut) ?? adresses[0] ?? null
+
+    return apiSuccess({
+      id:             client.id,
+      email:          client.email,
+      prenom:         client.prenom,
+      nom:            client.nom,
+      telephone:      client.telephone,
+      role:           client.role,
+      codeParrainage: client.codeParrainage,
+      adresses,
+      // US-04 : indicateur "adresse complète"
+      adresseComplete: !!adresseParDefaut,
+      chiens:          await Promise.all(chiens.map(serialiserChien)),
+      abonnementsActifs,
     })
-
-    // 404 explicite — le composable useAuth gère ce cas sans crasher
-    if (!client) {
-      throw createError({ statusCode: 404, statusMessage: 'Profil introuvable en base' })
-    }
-
-    return apiSuccess(client)
   })
 })

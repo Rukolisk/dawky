@@ -1,72 +1,120 @@
 // server/api/quiz/index.post.ts
+// Quiz "Trouve la box de ton chien" (3 étapes) → taille, formule, contenu, prix.
+// Public ; si l'utilisateur est connecté, le résultat lui est rattaché et la
+// fiche chien peut être créée directement (enregistrerChien = consentement).
 import { z } from 'zod'
 import prisma from '~/server/utils/prisma'
+import { getOptionalClient } from '~/server/utils/auth'
 import { apiSuccess, parseBody, withErrorHandling } from '~/server/utils/api'
+import { calculerTaille, recommanderFormule } from '~/server/utils/metier'
+import { getReglages } from '~/server/utils/reglages'
+import { idsAllergenes } from '~/server/utils/chiens'
+import { creerChienDepuisQuiz } from '~/server/utils/quiz'
+import { sendQuizRecommandation } from '~/server/utils/email'
+import { niveauActiviteSchema, tailleSchema } from '~/server/utils/schemas'
 
 const bodySchema = z.object({
-  nomChien: z.string().min(1), race: z.string().optional(),
-  poids: z.number().positive(), age: z.number().positive(),
-  estMacheur: z.boolean(), aDesAllergies: z.boolean(),
-  allergies: z.string().optional(),
-  niveauActivite: z.enum(['FAIBLE', 'MODERE', 'ELEVE']),
-  email: z.string().email().optional(),
-  clientId: z.string().optional(),
+  // Étape 1 — profil
+  nomChien:        z.string().trim().min(1).max(50),
+  race:            z.string().trim().max(80).optional(),
+  poids:           z.number().positive().max(120),
+  ageMois:         z.number().int().min(0).max(300).optional(),
+  // Taille choisie par le client s'il veut forcer la recommandation
+  taille:          tailleSchema.optional(),
+  // Étape 2 — comportement
+  niveauActivite:  niveauActiviteSchema,
+  estMacheur:      z.boolean(),
+  // Étape 3 — santé
+  allergenes:      z.array(z.string()).max(20).default([]),
+  allergiesAutres: z.string().trim().max(300).optional(),
+  sensibleTraces:  z.boolean().default(false),
+  email:           z.string().trim().toLowerCase().email().optional(),
+  accepteEmail:    z.boolean().default(false),
+  // Connecté uniquement : créer la fiche chien (consentement RGPD)
+  enregistrerChien: z.boolean().default(false),
 })
-
-function calculerTaille(poids: number): 'XS' | 'S' | 'M' | 'L' {
-  if (poids <= 5)  return 'XS'
-  if (poids <= 5)  return 'XS'
-  if (poids <= 10) return 'S'
-  if (poids <= 25) return 'M'
-  return 'L'
-}
-
-function recommanderBox(d: { estMacheur: boolean; niveauActivite: string; aDesAllergies: boolean }): 'SURPRISE' | 'CARTE' {
-  if (d.aDesAllergies) return 'CARTE'
-  if (d.estMacheur && d.niveauActivite === 'ELEVE') return 'CARTE'
-  return 'SURPRISE'
-}
-
-// Ce que contient la box selon la taille (même valeur totale)
-function contenuBox(taille: 'XS' | 'S' | 'M' | 'L', type: 'SURPRISE' | 'CARTE') {
-  const items: Record<'XS' | 'S' | 'M' | 'L', string[]> = {
-    XS: ['2 mini jouets ultra-doux', '2 sachets friandises nano', '1 mini bois de mastication', '1 soin coussinets', '1 accessoire mignon'],
-    XS: ['2 jouets ultra-légers', '1 sachet friandises mini', '1 bâton mastication XS', '1 soin coussinets', '1 accessoire mignon'],
-    S: ['2 petits jouets adaptés', '2 sachets de friandises mini', '1 bois de mastication S', '1 soin coussinets', '1 accessoire'],
-    M: ['1 jouet robuste moyen', '2 sachets de friandises', '1 mastication taille M', '1 soin ou lotion', '1 accessoire'],
-    L: ['1 grand jouet haute résistance', '1 grand sachet de friandises', '1 mastication XXL', '1 kit soin', '1 accessoire premium'],
-  }
-  return items[taille]
-}
 
 export default defineEventHandler(async (event) => {
   return withErrorHandling(async () => {
+    const client = await getOptionalClient(event)
     const body = await parseBody(event, bodySchema)
-    const taille = calculerTaille(body.poids)
-    const typeBoxRecommande = recommanderBox(body)
+    const reglages = await getReglages()
 
-    const formula = await prisma.formulaBox.findFirst({
-      where: { type: typeBoxRecommande, actif: true },
+    // Vérifie les codes avant d'enregistrer quoi que ce soit
+    const allergeneIds = await idsAllergenes(body.allergenes)
+    const allergenes = await prisma.allergene.findMany({ where: { id: { in: allergeneIds } } })
+
+    const tailleCalculee = calculerTaille(
+      body.poids,
+      { seuilS: reglages['taille.seuilS'], seuilM: reglages['taille.seuilM'] },
+      body.race,
+    )
+    const taille = body.taille ?? tailleCalculee
+    const formule = recommanderFormule({
+      aDesAllergies: allergeneIds.length > 0 || !!body.allergiesAutres,
+      estMacheur: body.estMacheur,
+      niveauActivite: body.niveauActivite,
     })
 
+    const email = body.email ?? client?.email
     const result = await prisma.quizResult.create({
       data: {
-        nomChien: body.nomChien, race: body.race,
-        poids: body.poids, age: body.age, taille,
-        estMacheur: body.estMacheur, aDesAllergies: body.aDesAllergies,
-        allergies: body.allergies, niveauActivite: body.niveauActivite,
-        typeBoxRecommande, formulaId: formula?.id,
-        email: body.email, clientId: body.clientId,
+        clientId:           client?.id,
+        email,
+        accepteEmail:       body.accepteEmail,
+        nomChien:           body.nomChien,
+        race:               body.race,
+        poids:              body.poids,
+        ageMois:            body.ageMois,
+        taille,
+        niveauActivite:     body.niveauActivite,
+        estMacheur:         body.estMacheur,
+        allergenes:         allergenes.map(a => a.code),
+        allergiesAutres:    body.allergiesAutres,
+        sensibleTraces:     body.sensibleTraces,
+        formuleRecommandee: formule,
       },
     })
 
+    const chien = client && body.enregistrerChien
+      ? await creerChienDepuisQuiz(result.id, client.id)
+      : null
+
+    const surprise = await prisma.formulaBox.findFirst({
+      where: { type: 'SURPRISE', actif: true },
+      include: { prix: true },
+    })
+    const prixSurprise = surprise?.prix.find(p => p.taille === taille)?.prix ?? null
+    const prixCompose = (await prisma.prixTaille.findFirst({
+      where: { taille, formula: { type: 'COMPOSE', actif: true } },
+    }))?.prix ?? null
+    const contenu = (surprise?.contenu as Record<string, Record<string, number>> | null)?.[taille] ?? null
+
+    if (email && body.accepteEmail) {
+      sendQuizRecommandation(email, {
+        nomChien: body.nomChien,
+        taille,
+        formule,
+        prix: formule === 'SURPRISE' ? prixSurprise : prixCompose,
+        allergenes: allergenes.map(a => a.nom),
+      }).catch(err => console.error('[Email] Recommandation quiz non envoyée :', err.message))
+    }
+
     return apiSuccess({
-      id: result.id, taille, typeBoxRecommande,
-      contenu: contenuBox(taille, typeBoxRecommande),
-      formula: formula ? { id: formula.id, nom: formula.nom, prix: formula.prix } : null,
-      message: typeBoxRecommande === 'CARTE'
-        ? `La Box À la Carte est parfaite pour ${body.nomChien} — vous contrôlez chaque produit.`
-        : `La Box Surprise est idéale pour ${body.nomChien} — une sélection soignée chaque mois !`,
+      id: result.id,
+      chienId: chien?.id ?? null,
+      taille,
+      tailleCalculee,
+      formuleRecommandee: formule,
+      // Contenu prévu par catégorie (sans révéler les produits)
+      contenu,
+      prixSurpriseMensuel: prixSurprise,
+      prixCompose,
+      fraisPort: reglages['livraison.fraisPort'],
+      allergenesExclus: allergenes.map(a => ({ code: a.code, nom: a.nom })),
+      message: formule === 'COMPOSE'
+        ? `Compose ta box est idéale pour ${body.nomChien} : vous choisissez chaque produit, les allergènes signalés sont filtrés automatiquement.`
+        : `La Box Surprise est idéale pour ${body.nomChien} : une sélection taille ${taille} chaque mois.`,
     })
   })
 })

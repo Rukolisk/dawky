@@ -1,88 +1,119 @@
-<!-- components/ui/RaceAutocomplete.vue -->
+<!-- components/ui/RaceAutocomplete.vue
+     Saisie assistée de la race (combobox ARIA, navigation clavier,
+     recherche insensible aux accents côté serveur). -->
 <template>
-  <div class="race-wrap" ref="wrapRef">
+  <div class="auto" @keydown="clavier">
     <input
-      :value="modelValue"
+      :id="id"
+      v-model="saisie"
+      class="input"
       type="text"
-      class="form-input"
-      placeholder="Labrador, Berger Allemand…"
+      role="combobox"
       autocomplete="off"
-      @input="onInput"
-      @focus="open = suggestions.length > 0"
-      @keydown.down.prevent="moveDown"
-      @keydown.up.prevent="moveUp"
-      @keydown.enter.prevent="selectActive"
-      @keydown.escape="open = false"
+      :placeholder="placeholder"
+      :aria-expanded="ouvert"
+      :aria-controls="`${id}-liste`"
+      :aria-activedescendant="actif >= 0 ? `${id}-opt-${actif}` : undefined"
+      aria-autocomplete="list"
+      @focus="chercher"
+      @input="chercher"
+      @blur="fermerPlusTard"
     />
-    <Transition name="addr-drop">
-      <ul v-if="open && suggestions.length" class="race-dropdown">
-        <li
-          v-for="(r, i) in suggestions"
-          :key="r"
-          :class="['race-option', { 'race-option--active': i === activeIdx }]"
-          @mousedown.prevent="select(r)"
-        >
-          🐕 {{ r }}
-        </li>
-      </ul>
-    </Transition>
+    <ul v-show="ouvert" :id="`${id}-liste`" class="auto-liste" role="listbox">
+      <li
+        v-for="(r, i) in suggestions" :id="`${id}-opt-${i}`" :key="r"
+        role="option" :aria-selected="i === actif" class="auto-option" :class="{ actif: i === actif }"
+        @mousedown.prevent="choisir(r)"
+      >{{ r }}</li>
+    </ul>
   </div>
 </template>
 
 <script setup lang="ts">
-const props = defineProps<{ modelValue: string }>()
-const emit  = defineEmits<{ 'update:modelValue': [v: string] }>()
-
-const suggestions = ref<string[]>([])
-const open       = ref(false)
-const activeIdx  = ref(-1)
-const wrapRef    = ref<HTMLElement | null>(null)
-let timer: ReturnType<typeof setTimeout> | null = null
-
-async function onInput(e: Event) {
-  const val = (e.target as HTMLInputElement).value
-  emit('update:modelValue', val)
-  if (timer) clearTimeout(timer)
-  if (val.length < 2) { suggestions.value = []; open.value = false; return }
-  timer = setTimeout(async () => {
-    const res = await $fetch<string[]>('/api/geo/races', { params: { q: val } })
-    suggestions.value = res
-    open.value = res.length > 0
-  }, 200)
-}
-
-function select(r: string) {
-  emit('update:modelValue', r)
-  open.value = false
-}
-function moveDown() { activeIdx.value = Math.min(activeIdx.value + 1, suggestions.value.length - 1) }
-function moveUp()   { activeIdx.value = Math.max(activeIdx.value - 1, -1) }
-function selectActive() { if (activeIdx.value >= 0) select(suggestions.value[activeIdx.value]) }
-
-onMounted(() => {
-  document.addEventListener('click', (e) => {
-    if (wrapRef.value && !wrapRef.value.contains(e.target as Node)) open.value = false
-  })
+const props = withDefaults(defineProps<{ modelValue: string; id: string; placeholder?: string }>(), {
+  placeholder: 'Commencez à saisir',
 })
+const emit = defineEmits<{ 'update:modelValue': [string] }>()
+
+const saisie = computed({
+  get: () => props.modelValue,
+  set: v => emit('update:modelValue', v),
+})
+const suggestions = ref<string[]>([])
+const ouvert = ref(false)
+const actif = ref(-1)
+
+const chercher = useDebounceFn(async () => {
+  if (saisie.value.trim().length < 2) {
+    ouvert.value = false
+    return
+  }
+  try {
+    suggestions.value = await $fetch<string[]>('/api/geo/races', { query: { q: saisie.value } })
+  } catch {
+    suggestions.value = []
+  }
+  // Pas de liste si la saisie correspond déjà exactement à une race
+  ouvert.value = suggestions.value.length > 0
+    && !(suggestions.value.length === 1 && suggestions.value[0] === saisie.value)
+  actif.value = -1
+}, 200)
+
+function choisir(race: string) {
+  saisie.value = race
+  ouvert.value = false
+}
+
+function fermerPlusTard() {
+  setTimeout(() => { ouvert.value = false }, 100)
+}
+
+function clavier(e: KeyboardEvent) {
+  if (!ouvert.value) return
+  if (e.key === 'ArrowDown') {
+    e.preventDefault()
+    actif.value = (actif.value + 1) % suggestions.value.length
+  } else if (e.key === 'ArrowUp') {
+    e.preventDefault()
+    actif.value = actif.value <= 0 ? suggestions.value.length - 1 : actif.value - 1
+  } else if (e.key === 'Enter' && actif.value >= 0) {
+    e.preventDefault()
+    choisir(suggestions.value[actif.value]!)
+  } else if (e.key === 'Escape') {
+    ouvert.value = false
+  }
+}
 </script>
 
 <style scoped>
-.race-wrap { position: relative; }
-.race-dropdown {
-  position: absolute; top: calc(100% + 4px); left: 0; right: 0;
-  background: white; border-radius: 14px;
-  border: 1.5px solid var(--brume);
-  box-shadow: var(--shadow-lg);
-  z-index: 200; list-style: none; overflow: hidden;
+.auto {
+  position: relative;
 }
-.race-option {
-  padding: .7rem 1rem; cursor: pointer; font-size: .9rem;
-  color: var(--text); transition: background .15s;
-  border-bottom: 1px solid var(--neige);
+.auto-liste {
+  position: absolute;
+  z-index: 10;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  margin: 0;
+  padding: 4px 0;
+  list-style: none;
+  background: var(--blanc);
+  border: 1px solid var(--noir);
+  border-radius: var(--rayon-champ);
+  max-height: 280px;
+  overflow-y: auto;
 }
-.race-option:last-child { border: none; }
-.race-option:hover, .race-option--active { background: #FFF4E6; }
-
-.addr-drop-enter-active, .addr-drop-leave-active { transition: opacity .15s, transform .15s; }
-.addr-drop-enter-from, .addr-drop-leave-to { opacity: 0; transform: translateY(-4px); }
+.auto-option {
+  padding: 10px 16px;
+  font-size: 16px;
+  cursor: pointer;
+  min-height: var(--tactile);
+  display: flex;
+  align-items: center;
+}
+.auto-option.actif,
+.auto-option:hover {
+  background: var(--fond-gris);
+}
 </style>

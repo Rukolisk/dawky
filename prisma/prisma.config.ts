@@ -10,8 +10,12 @@ import path from 'node:path'
 import { defineConfig } from 'prisma/config'
 import * as dotenv from 'dotenv'
 
-// Charger .env pour les commandes CLI (hors contexte Nuxt)
-dotenv.config({ path: path.resolve(__dirname, '../.env.production') })
+// Charger .env pour les commandes CLI (hors contexte Nuxt).
+// ⚠️ On ne charge .env.production QUE si NODE_ENV=production : sinon un
+// dev qui lance `npm run db:migrate` en local se retrouverait à migrer
+// la base de PRODUCTION si un .env.production traîne sur son poste.
+const envFile = process.env.NODE_ENV === 'production' ? '../.env.production' : '../.env'
+dotenv.config({ path: path.resolve(__dirname, envFile) })
 
 export default defineConfig({
   schema: path.join(__dirname, 'schema.prisma'),

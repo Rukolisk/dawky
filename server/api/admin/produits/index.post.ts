@@ -1,32 +1,34 @@
 // server/api/admin/produits/index.post.ts
+// Création d'un produit, avec un premier lot de stock facultatif
 import { z } from 'zod'
 import prisma from '~/server/utils/prisma'
+import { requireAdmin } from '~/server/utils/auth'
 import { apiSuccess, parseBody, withErrorHandling } from '~/server/utils/api'
+import { adminProduitInclude, allergenesDepuisCodes, produitChampsSchema, verifierComposition } from '~/server/utils/admin-produits'
 
-const bodySchema = z.object({
-  nom:         z.string().min(2),
-  description: z.string().min(5),
-  emoji:       z.string().default('📦'),
-  categorie:   z.enum(['MASTICATION', 'NUTRITION', 'JOUET', 'SOIN', 'ACCESSOIRE']),
-  tailles:     z.array(z.enum(['XS', 'S', 'M', 'L'])).min(1),
-  stock:       z.number().int().min(0).default(0),
-  estInvendu:  z.boolean().default(false),
-  actif:       z.boolean().default(true),
+const bodySchema = produitChampsSchema.extend({
+  stockInitial: z.object({
+    quantite:   z.number().int().min(1),
+    dateLimite: z.coerce.date().optional().nullable(),
+  }).optional(),
 })
 
 export default defineEventHandler(async (event) => {
   return withErrorHandling(async () => {
-    const body = await parseBody(event, bodySchema)
-    const { tailles, ...rest } = body
+    await requireAdmin(event)
+    const { tailles, allergenes, stockInitial, ...data } = await parseBody(event, bodySchema)
+    verifierComposition(data.categorie, data.ingredients)
 
     const produit = await prisma.produit.create({
       data: {
-        ...rest,
-        tailles: { create: tailles.map((taille) => ({ taille })) },
+        ...data,
+        tailles: { create: tailles.map(taille => ({ taille })) },
+        allergenes: { create: await allergenesDepuisCodes(allergenes) },
+        ...(stockInitial ? { lots: { create: [stockInitial] } } : {}),
       },
-      include: { tailles: { select: { taille: true } } },
+      include: adminProduitInclude,
     })
 
-    return apiSuccess(produit, 'Produit créé avec succès')
+    return apiSuccess(produit, 'Produit créé')
   })
 })
