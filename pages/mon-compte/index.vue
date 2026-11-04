@@ -54,6 +54,10 @@
         <NuxtLink v-if="commandes.length > 3" to="/mon-compte/commandes" class="lien petit">Toutes mes commandes</NuxtLink>
       </section>
 
+      <p v-if="commandes.some(c => ['EXPEDIEE', 'LIVREE'].includes(c.statut))" class="petit">
+        Sa box lui a plu&nbsp;? <NuxtLink to="/mon-compte/commandes#avis" class="lien">Donnez votre avis et partagez une photo de l'unboxing</NuxtLink>
+      </p>
+
       <section class="parrainage fond-burgundy">
         <div>
           <p class="sous-titre">Parrainez un proche</p>

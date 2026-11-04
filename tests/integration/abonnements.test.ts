@@ -69,6 +69,22 @@ describe("POST /api/abonnements", () => {
     expect(res.data.clientSecret).toBe("cs_test_1_secret");
   });
 
+  it("enregistre le point relais choisi", async () => {
+    preparerSouscription();
+    await handler(mockAuthEvent({
+      ...body,
+      livraison: { adresseId: "adr-001", modeLivraison: "POINT_RELAIS", pointRelaisId: "FR-012345", pointRelaisLibelle: "Tabac Presse, 9 rue Blainville, 75005 Paris" },
+    }));
+    expect(prismaMock.abonnement.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({ modeLivraison: "POINT_RELAIS", pointRelaisId: "FR-012345", pointRelaisLibelle: "Tabac Presse, 9 rue Blainville, 75005 Paris" }),
+    });
+  });
+
+  it("refuse le point relais sans point choisi", async () => {
+    preparerSouscription();
+    await expectH3Error(() => handler(mockAuthEvent({ ...body, livraison: { adresseId: "adr-001", modeLivraison: "POINT_RELAIS" } })), 400);
+  });
+
   it("le client peut choisir une autre taille que celle conseillée", async () => {
     preparerSouscription();
     await handler(mockAuthEvent({ ...body, taille: "M" }));

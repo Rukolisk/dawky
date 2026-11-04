@@ -18,6 +18,12 @@
         </ul>
       </section>
 
+      <section id="avis">
+        <h2 class="titre-section">Donner mon avis</h2>
+        <FormulaireAvis v-if="aRecuUneBox" />
+        <p v-else class="texte-secondaire">Vous pourrez donner votre avis (et partager une photo de l'unboxing) dès réception de votre première box.</p>
+      </section>
+
       <section id="factures">
         <h2 class="titre-section">Factures</h2>
         <ul v-if="factures.length" class="liste">
@@ -46,6 +52,8 @@ const commandes = ref<CommandeClient[]>([])
 const factures = ref<Facture[]>([])
 const cadeaux = ref<Cadeau[]>([])
 const chargement = ref(true)
+// Même règle que l'API : avis possible après une box expédiée ou livrée
+const aRecuUneBox = computed(() => commandes.value.some(c => ['EXPEDIEE', 'LIVREE'].includes(c.statut)))
 
 onMounted(async () => {
   try {

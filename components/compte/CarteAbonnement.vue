@@ -21,6 +21,10 @@
       <p v-else-if="abo.statut === 'IMPAYE'" class="petit">Le dernier prélèvement a été refusé. Mettez à jour votre carte pour que la box parte.</p>
       <p v-else-if="abo.statut === 'EN_ATTENTE_PAIEMENT'" class="petit">Le paiement n'a pas été finalisé.</p>
 
+      <p v-if="['ACTIF', 'PAUSE', 'IMPAYE'].includes(abo.statut)" class="petit">
+        Livraison : {{ abo.modeLivraison === 'POINT_RELAIS' ? `point relais ${abo.pointRelaisLibelle ?? ''}` : abo.adresse ? adresseSurUneLigne(abo.adresse) : 'aucune adresse' }}
+      </p>
+
       <!-- Conseil de taille si le chien a grandi (F-10) -->
       <p v-if="abo.changementTailleConseille && ['ACTIF', 'PAUSE'].includes(abo.statut)" class="conseil petit">
         D'après son poids actuel, la taille {{ abo.tailleConseillee }} semble mieux adaptée à {{ abo.chien.nom }}.
@@ -29,6 +33,7 @@
       <div class="abo-actions">
         <template v-if="abo.statut === 'ACTIF'">
           <button type="button" class="lien" @click="modale = 'taille'">Changer de taille</button>
+          <button type="button" class="lien" @click="ouvrirLivraison">Changer la livraison</button>
           <button type="button" class="lien" @click="modale = 'pause'">Mettre en pause</button>
           <button type="button" class="lien" @click="modale = 'resiliation'">Résilier</button>
         </template>
@@ -45,6 +50,30 @@
       </div>
     </div>
     <VisuelChien class="abo-visuel" src="/images/photos/texture-dalmatien.jpg" alt="" />
+
+    <!-- Changer la livraison (F-27) -->
+    <ModaleDawky :ouverte="modale === 'livraison'" titre="Livraison" @fermer="modale = null">
+      <p class="petit">Appliquée dès la prochaine box.</p>
+      <fieldset class="options">
+        <legend class="sr-only">Adresse</legend>
+        <ChoixOption v-for="a in adresses" :key="a.id" v-model="adresseChoisie" :valeur="a.id" nom="adresse-abo">
+          {{ a.prenom }} {{ a.nom }}, {{ adresseSurUneLigne(a) }}
+        </ChoixOption>
+      </fieldset>
+      <NuxtLink to="/mon-compte/compte#adresses" class="lien petit">Ajouter ou modifier une adresse</NuxtLink>
+      <label class="case-relais">
+        <input v-model="enPointRelais" type="checkbox" /> Livrer en point relais
+      </label>
+      <template v-if="enPointRelais">
+        <p v-if="pointRelais" class="petit">Point relais choisi : <strong>{{ pointRelais.libelle }}</strong></p>
+        <PointRelaisSelecteur :code-postal="codePostalChoisi" @choisir="pointRelais = $event" />
+      </template>
+      <p v-if="erreur" class="message-erreur" role="alert">{{ erreur }}</p>
+      <button
+        type="button" class="btn btn-principal btn-grand btn-bloc"
+        :disabled="envoi || !adresseChoisie || (enPointRelais && !pointRelais)" @click="changerLivraison"
+      >Enregistrer la livraison</button>
+    </ModaleDawky>
 
     <!-- Changer de taille -->
     <ModaleDawky :ouverte="modale === 'taille'" titre="Changer de taille" @fermer="modale = null">
@@ -109,7 +138,33 @@ const props = defineProps<{
 const emit = defineEmits<{ maj: [] }>()
 const toast = useToast()
 
-const modale = ref<'taille' | 'pause' | 'resiliation' | null>(null)
+const modale = ref<'taille' | 'livraison' | 'pause' | 'resiliation' | null>(null)
+
+// ─── Livraison ───
+const { profile } = useAuth()
+const adresses = computed(() => profile.value?.adresses ?? [])
+const adresseChoisie = ref<string | null>(null)
+const enPointRelais = ref(false)
+const pointRelais = ref<{ id: string; libelle: string } | null>(null)
+const codePostalChoisi = computed(() => adresses.value.find(a => a.id === adresseChoisie.value)?.codePostal ?? '')
+
+function ouvrirLivraison() {
+  adresseChoisie.value = props.abo.adresse?.id ?? adresses.value.find(a => a.parDefaut)?.id ?? adresses.value[0]?.id ?? null
+  enPointRelais.value = props.abo.modeLivraison === 'POINT_RELAIS'
+  pointRelais.value = props.abo.pointRelaisId && props.abo.pointRelaisLibelle
+    ? { id: props.abo.pointRelaisId, libelle: props.abo.pointRelaisLibelle }
+    : null
+  modale.value = 'livraison'
+}
+
+const changerLivraison = () => action(() => api(`/api/abonnements/${props.abo.id}`, {
+  method: 'PUT',
+  body: {
+    livraison: enPointRelais.value && pointRelais.value
+      ? { adresseId: adresseChoisie.value, modeLivraison: 'POINT_RELAIS', pointRelaisId: pointRelais.value.id, pointRelaisLibelle: pointRelais.value.libelle }
+      : { adresseId: adresseChoisie.value, modeLivraison: 'DOMICILE' },
+  },
+}), 'Livraison mise à jour')
 const nouvelleTaille = ref<Taille>(props.abo.changementTailleConseille ? props.abo.tailleConseillee : props.abo.taille)
 const moisPause = ref(1)
 const raison = ref('')
@@ -208,6 +263,19 @@ async function reprendrePaiement() {
 .abo-actions .lien {
   color: var(--blanc);
   font-size: 15px;
+}
+.case-relais {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 16px;
+  cursor: pointer;
+  min-height: var(--tactile);
+}
+.case-relais input {
+  width: 20px;
+  height: 20px;
+  accent-color: var(--burgundy);
 }
 .options {
   border: 0;

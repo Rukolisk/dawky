@@ -132,8 +132,14 @@ export const supabaseAuthMock = {
   },
 };
 
+// Stockage (photos d'avis)
+export const storageMock = {
+  upload: vi.fn(),
+  getPublicUrl: vi.fn(),
+};
+
 vi.mock("@supabase/supabase-js", () => ({
-  createClient: vi.fn(() => ({ auth: supabaseAuthMock })),
+  createClient: vi.fn(() => ({ auth: supabaseAuthMock, storage: { from: vi.fn(() => storageMock) } })),
 }));
 
 // ── Reset avant chaque test ──────────────────────────────────

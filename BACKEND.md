@@ -15,7 +15,7 @@ API Nuxt 3 / Nitro (`server/`), Prisma 7 + PostgreSQL (Supabase), Supabase Auth,
    En production, créez l'endpoint `https://dawky.fr/api/webhooks/paiement` dans le dashboard Stripe avec les événements listés dans `.env.example`.
    Pour le rappel avant renouvellement, réglez le délai de l'événement `invoice.upcoming` dans Stripe (Paramètres > Facturation > Abonnements).
 5. Portail client Stripe (changement de carte) : activez-le dans le dashboard Stripe, Paramètres > Facturation > Portail client.
-6. Photos d'avis : créez un bucket **public** `avis` dans Supabase Storage.
+6. Photos d'avis : bucket **public** `avis` dans Supabase Storage (5 Mo max, JPEG/PNG/WebP). Déjà créé sur le projet de dev, à créer sur le projet de prod.
 7. Tests : `npm test`.
 
 ## Conventions
@@ -108,7 +108,7 @@ Réductions : un seul code par paiement (code promo ou code de parrainage), pass
 
 ## Hors périmètre / à faire
 
-- **Points relais** : l'API stocke l'identifiant et le libellé du point choisi. La recherche se fera par le widget JavaScript du transporteur côté front, une fois le transporteur choisi.
+- **Points relais** : widget officiel Mondial Relay (`components/commande/PointRelaisSelecteur.vue`), dans la commande et dans l'espace client. L'API stocke l'identifiant (`FR-012345`) et le libellé du point. `MONDIAL_RELAY_BRAND` vaut `BDTEST` (démonstration) : le remplacer par le code enseigne fourni à l'ouverture du compte Mondial Relay. Les abonnements cadeaux restent livrés à domicile.
 - Connexion Google/Apple, plusieurs abonnements par chien, tableau de bord KPI : prévus en v2 dans le cahier des charges.
 - Emails : tous partent par Resend depuis `EMAIL_FROM`, qui doit être une adresse d'un domaine vérifié dans Resend (`contact@dawky.fr`), jamais une adresse gmail. Le mot de passe oublié n'utilise pas le SMTP de Supabase.
 - Dans Supabase (Authentication > URL Configuration), ajouter `http://localhost:3000/**` et `https://dawky.fr/**` aux Redirect URLs, sinon le lien de réinitialisation renvoie vers la Site URL.

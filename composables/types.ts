@@ -106,6 +106,10 @@ export interface AbonnementClient {
   prixMensuel: number
   dateFin: string | null
   pauseJusquau: string | null
+  modeLivraison: 'DOMICILE' | 'POINT_RELAIS'
+  pointRelaisId: string | null
+  pointRelaisLibelle: string | null
+  adresse: Adresse | null
   chien: { id: string; nom: string; poids: number }
   prochaineBox: { date: string; taille: Taille; theme: string | null } | null
   tailleConseillee: Taille

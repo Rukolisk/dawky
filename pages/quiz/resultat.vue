@@ -36,6 +36,10 @@
           <p v-if="res.allergenesExclus.length || reponses.allergiesAutres" class="petit">
             <NuxtLink to="/comment-dawky-adapte-ma-box" class="lien">Comment Dawky adapte sa box à ses allergies</NuxtLink>
           </p>
+          <PartageResultat
+            class="petit" :nom="nom" :taille="res.taille"
+            :photo="PHOTOS_RESULTAT[res.taille]!" :etiquettes="etiquettes"
+          />
         </div>
         <VisuelChien class="resultat-visuel" :src="PHOTOS_RESULTAT[res.taille]" :alt="`Un chien de taille ${res.taille}`" position="50% 30%" />
       </section>

@@ -68,6 +68,8 @@ export default defineNuxtConfig({
   appUrl:           process.env.APP_URL ?? 'http://localhost:3000',
   // Clé publiable Stripe (pk_test_… / pk_live_…), sans danger côté navigateur
   stripePublishableKey: process.env.NUXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || process.env.STRIPE_PUBLISHABLE_KEY || '',
+  // Code enseigne Mondial Relay (« BDTEST » = test, à remplacer en production)
+  mondialRelayBrand: process.env.NUXT_PUBLIC_MONDIAL_RELAY_BRAND || process.env.MONDIAL_RELAY_BRAND || 'BDTEST  ',
   brandName:        'Dawky',
 },
   },

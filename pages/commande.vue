@@ -93,6 +93,15 @@
               <ChoixOption v-model="adresseId" valeur="nouvelle" nom="adresse">Nouvelle adresse</ChoixOption>
             </div>
             <FormulaireAdresse v-if="!adresses.length || adresseId === 'nouvelle'" v-model="adresse" prefixe="cmd" />
+
+            <label class="case-simple">
+              <input v-model="enPointRelais" type="checkbox" />
+              <span>Livrer en point relais</span>
+            </label>
+            <template v-if="enPointRelais">
+              <p v-if="pointRelais" class="relais-choisi petit">Point relais choisi : <strong>{{ pointRelais.libelle }}</strong></p>
+              <PointRelaisSelecteur :code-postal="codePostalLivraison" @choisir="pointRelais = $event" />
+            </template>
           </section>
 
           <!-- Code promo -->
@@ -203,6 +212,8 @@ const nouveauChien = reactive({ nom: '', poids: null as number | null })
 const consentementChien = ref(false)
 const adresseId = ref<string>('nouvelle')
 const adresse = ref(adresseVide())
+const enPointRelais = ref(false)
+const pointRelais = ref<{ id: string; libelle: string } | null>(null)
 const code = ref('')
 const reduction = ref<{ type: 'POURCENTAGE' | 'MONTANT'; valeur: number } | null>(null)
 const erreurCode = ref('')
@@ -244,6 +255,12 @@ watchEffect(() => {
 })
 
 const chienSelectionne = computed(() => chiens.value.find(c => c.id === chienId.value) ?? null)
+
+// Code postal autour duquel chercher les points relais
+const codePostalLivraison = computed(() => {
+  const existante = adresses.value.find(a => a.id === adresseId.value)
+  return existante?.codePostal ?? adresse.value.codePostal
+})
 
 const taille = computed<Taille>(() => {
   if (!estSurprise.value && compose.value.taille) return compose.value.taille
@@ -323,6 +340,7 @@ function valider(): string | null {
   if ((adresseId.value === 'nouvelle' || !adresses.value.length) && !adresseComplete(adresse.value)) {
     return 'Complétez l\'adresse de livraison (nom, adresse, code postal, ville).'
   }
+  if (enPointRelais.value && !pointRelais.value) return 'Choisissez votre point relais sur la carte, ou décochez « Livrer en point relais ».'
   if (!cgv.value) return 'Acceptez les conditions générales de vente pour continuer.'
   return null
 }
@@ -399,7 +417,9 @@ async function confirmer(confirmerRisqueAllergie: boolean) {
     await fetchProfile()
 
     const commun = {
-      livraison: { adresseId: idAdresse, modeLivraison: 'DOMICILE' },
+      livraison: enPointRelais.value && pointRelais.value
+        ? { adresseId: idAdresse, modeLivraison: 'POINT_RELAIS', pointRelaisId: pointRelais.value.id, pointRelaisLibelle: pointRelais.value.libelle }
+        : { adresseId: idAdresse, modeLivraison: 'DOMICILE' },
       codePromo: code.value || undefined,
       accepteCgv: true,
     }
@@ -509,6 +529,11 @@ async function confirmer(confirmerRisqueAllergie: boolean) {
   display: flex;
   gap: var(--e1);
   max-width: 420px;
+}
+.relais-choisi {
+  border-left: 3px solid var(--burgundy);
+  background: var(--fond-gris);
+  padding: 10px 14px;
 }
 .code-ok {
   color: var(--burgundy);
