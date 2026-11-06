@@ -96,13 +96,38 @@ export async function getOptionalClient(event: H3Event) {
 }
 
 /**
- * Vérifie le token ET que le client a le rôle ADMIN.
+ * Niveau d'authentification de la session : 'aal1' (mot de passe seul) ou
+ * 'aal2' (mot de passe + code de double authentification).
+ * Lu dans le jeton, à n'appeler qu'APRÈS sa vérification par getSupabaseUser.
+ */
+export function niveauAuthentification(event: H3Event): string | null {
+  const token = extractBearerToken(event)
+  const charge = token?.split('.')[1]
+  if (!charge) return null
+  try {
+    return JSON.parse(Buffer.from(charge, 'base64url').toString('utf8')).aal ?? null
+  } catch {
+    return null
+  }
+}
+
+/**
+ * Vérifie le token, le rôle ADMIN et la double authentification : sans
+ * code validé (aal2), aucune route d'administration n'est accessible.
  */
 export async function requireAdmin(event: H3Event) {
   const { client } = await requireAuth(event)
 
   if (client.role !== 'ADMIN') {
     throw createError({ statusCode: 403, statusMessage: 'Accès réservé aux administrateurs' })
+  }
+
+  if (niveauAuthentification(event) !== 'aal2') {
+    throw createError({
+      statusCode: 403,
+      statusMessage: 'Double authentification requise pour le back-office',
+      data: { code: 'MFA_REQUISE' },
+    })
   }
 
   return client

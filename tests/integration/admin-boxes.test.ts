@@ -25,6 +25,12 @@ describe("admin — accès", () => {
     prismaMock.client.findUnique.mockResolvedValue(mockClient);
     await expectH3Error(() => valider(mockAdminEvent({ mois: "2026-12" })), 403);
   });
+
+  it("refuse un admin sans double authentification validée (403)", async () => {
+    prismaMock.client.findUnique.mockResolvedValue(mockAdmin);
+    await expectH3Error(() => valider(mockAdminEvent({ mois: "2026-12" }, undefined, "aal1")), 403, "Double authentification");
+    expect(prismaMock.boxMensuelle.findMany).not.toHaveBeenCalled();
+  });
 });
 
 describe("POST /api/admin/boxes-mensuelles", () => {

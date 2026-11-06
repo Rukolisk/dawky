@@ -61,12 +61,29 @@ export function mockInvalidSupabaseToken() {
  * Raccourci pour créer un event admin authentifié (token Supabase valide +
  * le mock Prisma doit séparément renvoyer un Client avec role: 'ADMIN')
  */
-export function mockAdminEvent(body?: Record<string, unknown>, params?: Record<string, string>): H3Event {
+/**
+ * Faux jeton au format JWT portant un niveau d'authentification
+ * (sa signature n'est jamais vérifiée : getUser est simulé).
+ */
+export function fauxJeton(aal: 'aal1' | 'aal2'): string {
+  const b64 = (o: object) => Buffer.from(JSON.stringify(o)).toString('base64url')
+  return `${b64({ alg: 'HS256' })}.${b64({ sub: 'admin-uid-123', aal })}.signature`
+}
+
+/**
+ * Event admin authentifié, double authentification validée (aal2) par
+ * défaut. Passer aal: 'aal1' pour simuler un admin sans code validé.
+ */
+export function mockAdminEvent(
+  body?: Record<string, unknown>,
+  params?: Record<string, string>,
+  aal: 'aal1' | 'aal2' = 'aal2',
+): H3Event {
   mockValidSupabaseToken('admin-uid-123', 'bastien@dawky.fr')
   return mockEvent({
     body,
     params,
-    headers: { authorization: 'Bearer fake-admin-token' },
+    headers: { authorization: `Bearer ${fauxJeton(aal)}` },
   })
 }
 

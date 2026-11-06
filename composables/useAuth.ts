@@ -168,11 +168,44 @@ export function useAuth() {
     if (error) throw new Error(traduireErreurAuth(error))
   }
 
+  // ─── Double authentification (obligatoire pour le back-office) ───
+
+  /** 'aal2' si la session a validé un code, sinon 'aal1' ; et s'il existe un facteur configuré */
+  async function etatMfa() {
+    const sb = getSupabase()
+    const [{ data: niveau }, { data: facteurs }] = await Promise.all([
+      sb.auth.mfa.getAuthenticatorAssuranceLevel(),
+      sb.auth.mfa.listFactors(),
+    ])
+    const verifie = facteurs?.totp.find(f => f.status === 'verified') ?? null
+    return { niveau: niveau?.currentLevel ?? 'aal1', facteurId: verifie?.id ?? null }
+  }
+
+  /** Démarre la configuration d'une application d'authentification (QR code) */
+  async function demarrerMfa() {
+    const sb = getSupabase()
+    // Une configuration abandonnée laisse un facteur non vérifié : on le retire
+    const { data: facteurs } = await sb.auth.mfa.listFactors()
+    for (const f of facteurs?.all ?? []) {
+      if (f.status !== 'verified') await sb.auth.mfa.unenroll({ factorId: f.id })
+    }
+    const { data, error } = await sb.auth.mfa.enroll({ factorType: 'totp', friendlyName: `Dawky ${new Date().toISOString().slice(0, 10)}` })
+    if (error || !data) throw new Error(traduireErreurAuth(error))
+    return { facteurId: data.id, qrCode: data.totp.qr_code, secret: data.totp.secret }
+  }
+
+  /** Vérifie un code à 6 chiffres : la session passe en aal2 */
+  async function validerCodeMfa(facteurId: string, code: string) {
+    const { error } = await getSupabase().auth.mfa.challengeAndVerify({ factorId: facteurId, code })
+    if (error) throw new Error(/invalid|expired/i.test(error.message) ? 'Code incorrect ou expiré. Saisissez le code affiché en ce moment dans votre application.' : traduireErreurAuth(error))
+  }
+
   const isLoggedIn = computed(() => !!user.value)
   const isAdmin = computed(() => profile.value?.role === 'ADMIN')
 
   return {
     user, profile, ready, isLoggedIn, isAdmin, profilManquant,
     init, fetchProfile, completerProfil, signIn, signUp, signOut, demanderReinitialisation, changerMotDePasse,
+    etatMfa, demarrerMfa, validerCodeMfa,
   }
 }

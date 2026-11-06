@@ -42,6 +42,7 @@ export default defineNuxtConfig({
     // La session de récupération arrive dans l'URL (#access_token=…)
     '/mot-de-passe/**': { ssr: false },
     '/admin/**': { ssr: false },
+    '/securite-admin': { ssr: false },
     '/commande': { ssr: false },
     '/commande/**': { ssr: false },
     '/offrir/commande': { ssr: false },
