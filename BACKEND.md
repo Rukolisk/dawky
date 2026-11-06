@@ -112,3 +112,9 @@ Réductions : un seul code par paiement (code promo ou code de parrainage), pass
 - Connexion Google/Apple, plusieurs abonnements par chien, tableau de bord KPI : prévus en v2 dans le cahier des charges.
 - Emails : tous partent par Resend depuis `EMAIL_FROM`, qui doit être une adresse d'un domaine vérifié dans Resend (`contact@dawky.fr`), jamais une adresse gmail. Le mot de passe oublié n'utilise pas le SMTP de Supabase.
 - Dans Supabase (Authentication > URL Configuration), ajouter `http://localhost:3000/**` et `https://dawky.fr/**` aux Redirect URLs, sinon le lien de réinitialisation renvoie vers la Site URL.
+
+## Sécurité
+
+- **CSP** (`server/plugins/csp.ts`, production uniquement) : nonce aléatoire par requête sur les scripts de Nuxt, `strict-dynamic` pour les scripts qu'ils chargent (Stripe.js, Mondial Relay, Leaflet). Un script injecté (attribut `onerror`, lien `javascript:`) est bloqué par le navigateur. Pour ajouter un service tiers (mesure d'audience…), compléter `politiqueCsp()` : `img-src`, `connect-src` ou `frame-src` selon le besoin.
+- **En-têtes Nginx** : HSTS, X-Frame-Options, X-Content-Type-Options, Referrer-Policy, limitation de débit des formulaires publics.
+- **Base de données** : la clé publique Supabase n'a aucun droit sur le schéma `public` (vérifié) ; toutes les données passent par l'API Nuxt.
