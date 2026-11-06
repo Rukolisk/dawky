@@ -11,7 +11,7 @@ import { CLES_REGLAGES, getReglages, REGLAGES, type CleReglage } from '~/server/
 export default defineEventHandler(async (event) => {
   return withErrorHandling(async () => {
     await requireAdmin(event)
-    const body = z.record(z.unknown()).parse(await readBody(event))
+    const body = z.record(z.string(), z.unknown()).parse(await readBody(event))
 
     const erreurs: Record<string, string> = {}
     const valeurs: Array<[CleReglage, unknown]> = []

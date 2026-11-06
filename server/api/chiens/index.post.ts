@@ -11,7 +11,7 @@ import { chienChampsSchema } from '~/server/utils/chiens-schema'
 
 const bodySchema = chienChampsSchema.extend({
   consentementRgpd: z.literal(true, {
-    errorMap: () => ({ message: 'Votre accord est nécessaire pour enregistrer la fiche de votre chien' }),
+    error: 'Votre accord est nécessaire pour enregistrer la fiche de votre chien',
   }),
 })
 

@@ -16,7 +16,7 @@ import { notifierAlertesStock } from '~/server/utils/alertes'
 const bodySchema = z.object({
   mois: moisSchema,
   // Confirmation obligatoire côté interface
-  confirmation: z.literal(true, { errorMap: () => ({ message: 'Confirmation requise' }) }),
+  confirmation: z.literal(true, { error: 'Confirmation requise' }),
 })
 
 export default defineEventHandler(async (event) => {

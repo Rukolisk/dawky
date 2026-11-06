@@ -12,7 +12,7 @@ import { sendAbonnementResiliation } from '~/server/utils/email'
 
 const bodySchema = z.object({
   // Confirmation explicite demandée à l'écran
-  confirmation: z.literal(true, { errorMap: () => ({ message: 'Confirmation requise' }) }),
+  confirmation: z.literal(true, { error: 'Confirmation requise' }),
   raison:       z.string().trim().max(500).optional(),
 })
 

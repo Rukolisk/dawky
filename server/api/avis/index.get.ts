@@ -5,7 +5,7 @@ import prisma from '~/server/utils/prisma'
 import { apiSuccess, parseQuery, queryBool, withErrorHandling } from '~/server/utils/api'
 
 const querySchema = z.object({
-  avecPhoto: queryBool.default('false'),
+  avecPhoto: queryBool.default(false),
   page:      z.coerce.number().int().min(1).default(1),
   limit:     z.coerce.number().int().min(1).max(50).default(12),
 })

@@ -11,7 +11,7 @@ const querySchema = z.object({
   categorie:      categorieSchema.optional(),
   taille:         tailleSchema.optional(),
   sansAllergenes: queryList.optional(),
-  traces:         queryBool.default('false'),
+  traces:         queryBool.default(false),
   page:           z.coerce.number().int().min(1).default(1),
   limit:          z.coerce.number().int().min(1).max(50).default(20),
 })

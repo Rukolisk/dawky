@@ -1,6 +1,7 @@
 // nuxt.config.ts
 export default defineNuxtConfig({
-  devtools: { enabled: true },
+  // DevTools désactivés : outil de dev non utilisé, versions récentes vulnérables
+  devtools: { enabled: false },
 
   modules: ['@vueuse/nuxt'],
 

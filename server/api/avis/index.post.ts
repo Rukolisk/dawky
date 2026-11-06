@@ -28,7 +28,7 @@ export default defineEventHandler(async (event) => {
     const champs = Object.fromEntries(parts.filter(p => !p.filename).map(p => [p.name, p.data.toString('utf8')]))
     const parsed = champsSchema.safeParse(champs)
     if (!parsed.success) {
-      throw createError({ statusCode: 400, statusMessage: 'Validation échouée', data: parsed.error.flatten().fieldErrors })
+      throw createError({ statusCode: 400, statusMessage: 'Validation échouée', data: z.flattenError(parsed.error).fieldErrors })
     }
 
     let photoUrl: string | null = null

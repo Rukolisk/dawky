@@ -39,5 +39,5 @@ export const livraisonSchema = z.object({
 
 // Acceptation des CGV obligatoire avant tout paiement
 export const cgvSchema = z.literal(true, {
-  errorMap: () => ({ message: 'Vous devez accepter les conditions générales de vente' }),
+  error: 'Vous devez accepter les conditions générales de vente',
 })

@@ -3,7 +3,10 @@
 // Helpers partagés pour les routes API
 // ─────────────────────────────────────────
 import { H3Event, createError, readBody, getQuery, getRouterParam } from 'h3'
-import { z, ZodError, type ZodTypeAny } from 'zod'
+import { z, ZodError } from 'zod'
+
+// Messages de validation par défaut en français (champ manquant, type…)
+z.config(z.locales.fr())
 
 /**
  * Réponse de succès normalisée
@@ -20,7 +23,7 @@ export function apiSuccess<T>(data: T, message?: string) {
  * Parse et valide le body avec un schéma Zod.
  * Lance une H3Error 400 si invalide.
  */
-export async function parseBody<S extends ZodTypeAny>(event: H3Event, schema: S): Promise<z.output<S>> {
+export async function parseBody<S extends z.ZodType>(event: H3Event, schema: S): Promise<z.output<S>> {
   const body = await readBody(event)
   try {
     return schema.parse(body)
@@ -29,7 +32,7 @@ export async function parseBody<S extends ZodTypeAny>(event: H3Event, schema: S)
       throw createError({
         statusCode: 400,
         statusMessage: 'Validation échouée',
-        data: err.flatten().fieldErrors,
+        data: z.flattenError(err).fieldErrors,
       })
     }
     throw err
@@ -39,7 +42,7 @@ export async function parseBody<S extends ZodTypeAny>(event: H3Event, schema: S)
 /**
  * Parse les query params avec un schéma Zod.
  */
-export function parseQuery<S extends ZodTypeAny>(event: H3Event, schema: S): z.output<S> {
+export function parseQuery<S extends z.ZodType>(event: H3Event, schema: S): z.output<S> {
   const query = getQuery(event)
   try {
     return schema.parse(query)
@@ -48,7 +51,7 @@ export function parseQuery<S extends ZodTypeAny>(event: H3Event, schema: S): z.o
       throw createError({
         statusCode: 400,
         statusMessage: 'Paramètres invalides',
-        data: err.flatten().fieldErrors,
+        data: z.flattenError(err).fieldErrors,
       })
     }
     throw err

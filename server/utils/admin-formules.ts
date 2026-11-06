@@ -2,7 +2,8 @@
 import { z } from 'zod'
 import { CATEGORIES } from './metier'
 
-const contenuTailleSchema = z.record(z.enum(CATEGORIES), z.number().int().min(0).max(10))
+// partialRecord : toutes les catégories ne sont pas obligatoires
+const contenuTailleSchema = z.partialRecord(z.enum(CATEGORIES), z.number().int().min(0).max(10))
 
 export const formuleChampsSchema = z.object({
   slug:           z.string().trim().min(2).max(60).regex(/^[a-z0-9-]+$/, 'Minuscules, chiffres et tirets'),
