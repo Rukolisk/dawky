@@ -118,3 +118,21 @@ Réductions : un seul code par paiement (code promo ou code de parrainage), pass
 - **CSP** (`server/plugins/csp.ts`, production uniquement) : nonce aléatoire par requête sur les scripts de Nuxt, `strict-dynamic` pour les scripts qu'ils chargent (Stripe.js, Mondial Relay, Leaflet). Un script injecté (attribut `onerror`, lien `javascript:`) est bloqué par le navigateur. Pour ajouter un service tiers (mesure d'audience…), compléter `politiqueCsp()` : `img-src`, `connect-src` ou `frame-src` selon le besoin.
 - **En-têtes Nginx** : HSTS, X-Frame-Options, X-Content-Type-Options, Referrer-Policy, limitation de débit des formulaires publics.
 - **Base de données** : la clé publique Supabase n'a aucun droit sur le schéma `public` (vérifié) ; toutes les données passent par l'API Nuxt.
+
+## Sauvegardes
+
+Supabase gratuit ne garantit pas la restauration : une sauvegarde quotidienne chiffrée est faite depuis le VPS.
+
+```bash
+# Sur le VPS, depuis /opt/dawky (variables BACKUP_* dans .env.production)
+bash scripts/sauvegarde-bdd.sh                       # sauvegarde manuelle
+crontab -e                                           # puis ajouter :
+0 3 * * * cd /opt/dawky && bash scripts/sauvegarde-bdd.sh >> /var/log/dawky-sauvegarde.log 2>&1
+
+bash scripts/restauration-bdd.sh <fichier> --verifier   # test de lecture (à faire chaque mois)
+bash scripts/restauration-bdd.sh <fichier> --restaurer  # ⚠️ remplace les données
+```
+
+- Schéma `public` uniquement (données Dawky) ; les comptes de connexion restent chez Supabase.
+- Chiffrement AES-256 (OpenSSL, PBKDF2) avec `BACKUP_PASSPHRASE` : **garder cette phrase hors du VPS**.
+- Conservation 30 jours ; copie hors du VPS conseillée via `BACKUP_RCLONE_DEST` (rclone : S3, Backblaze, Google Drive…).
